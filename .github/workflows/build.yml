@@ -1,9 +1,8 @@
-name: Test and package
+name: Test and build ClaudeBridge
 
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -16,29 +15,50 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: windows-latest
+            label: Windows
+            platform: win32
+          - os: ubuntu-latest
+            label: Linux
+            platform: linux
+          - os: macos-latest
+            label: macOS
+            platform: darwin
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Node.js
+      - name: Use Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Syntax check
-        run: node --check server/index.js
-      - name: Run MCP smoke tests
+      - name: Check JavaScript syntax
+        shell: bash
+        run: |
+          node --check server/index.js
+          node --check server/v2.js
+          node --check server/db.js
+          node --check server/worker.js
+      - name: Run legacy smoke tests
         run: node tests/smoke.js
-      - name: Validate manifest
-        run: node -e "const m=require('./manifest.json'); if(m.display_name!=='ClaudeBridge'||m.server.type!=='node') process.exit(1)"
-      - name: Package Desktop Extension
-        if: matrix.os == 'ubuntu-latest'
-        run: zip -q -r ClaudeBridge.mcpb manifest.json server/
-      - name: Upload installable package
-        if: matrix.os == 'ubuntu-latest'
+      - name: Run v2 smoke tests
+        run: node tests/v2.js
+      - name: Bundle Codex CLI for this platform
+        run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex
+      - name: Set manifest platform
+        shell: bash
+        run: |
+          node -e 'const fs=require("fs");const m=require("./manifest.json");m.compatibility.platforms=[process.argv[1]];fs.writeFileSync("manifest.json",JSON.stringify(m,null,2)+"\n")' ${{ matrix.platform }}
+      - name: Bundle ClaudeBridge Extension
+        shell: pwsh
+        run: |
+          Compress-Archive -Path manifest.json,server,vendor -DestinationPath "ClaudeBridge-${{ matrix.label }}.zip" -Force
+          Rename-Item "ClaudeBridge-${{ matrix.label }}.zip" "ClaudeBridge-${{ matrix.label }}.mcpb"
+      - name: Upload build
         uses: actions/upload-artifact@v4
         with:
-          name: ClaudeBridge-mcpb
-          path: ClaudeBridge.mcpb
+          name: ClaudeBridge-${{ matrix.label }}
+          path: ClaudeBridge-${{ matrix.label }}.mcpb
           if-no-files-found: error
 
   preview-release:
@@ -48,17 +68,18 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download packaged extension
+      - name: Download all platform packages
         uses: actions/download-artifact@v4
         with:
-          name: ClaudeBridge-mcpb
-      - name: Publish or update preview download
+          pattern: ClaudeBridge-*
+          merge-multiple: true
+      - name: Publish preview installers
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           if gh release view preview >/dev/null 2>&1; then
-            gh release upload preview ClaudeBridge.mcpb --clobber
+            gh release upload preview ClaudeBridge-*.mcpb --clobber
           else
-            gh release create preview ClaudeBridge.mcpb --target "${GITHUB_SHA}" --title "ClaudeBridge Preview" --notes "Automatically built from main after successful Windows, macOS and Linux tests. Experimental: live Claude Desktop login integration is not yet fully verified." --prerelease
+            gh release create preview ClaudeBridge-*.mcpb --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Experimental cross-platform desktop extensions. Codex CLI is bundled. One-time ChatGPT sign-in remains required." --prerelease
           fi
