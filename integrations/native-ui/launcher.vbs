@@ -6,7 +6,7 @@ folder = fs.GetParentFolderName(WScript.ScriptFullName)
 quote = Chr(34)
 marker = folder & "\node-path.txt"
 If fs.FileExists(marker) Then
-  Set reader = fs.OpenTextFile(marker, 1)
+  Set reader = fs.OpenTextFile(marker, 1, False, -1)
   nodePath = Trim(reader.ReadAll)
   reader.Close
 Else
