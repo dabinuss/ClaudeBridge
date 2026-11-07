@@ -255,6 +255,7 @@ jobs:
           else
             gh release create preview ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-* SHA256SUMS --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Lightweight SHA256-verified online installers for Windows, macOS and Linux. Node.js is downloaded from nodejs.org and Codex CLI from the official npm registry during setup. One-time ChatGPT sign-in required." --prerelease
           fi
+          gh release edit preview --title "ClaudeBridge 2.6 — Lightweight Online Setup" --notes "Download the small WebSetup file for Windows, macOS or Linux. The installer verifies the ClaudeBridge core SHA-256, downloads a private Node.js LTS runtime from nodejs.org with official checksum verification, then installs the pinned Codex CLI through the official npm registry. Re-running the same file offers update or uninstall. Signed-in real Claude Desktop native menu compatibility is experimental; no global Node installation is required."
           # Offline packages stay available as CI artifacts, not duplicate preview downloads.
           for obsolete in \
             ClaudeBridge-Linux.mcpb ClaudeBridge-macOS.mcpb ClaudeBridge-Windows.mcpb \
