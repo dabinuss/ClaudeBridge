@@ -33,4 +33,4 @@ win.__claudebridgeHost=(raw)=>{
  assert.equal(win.document.querySelectorAll('[data-claudebridge-picker]').length,1,'no duplicate injected controls');
  assert(requests>=2,'native host bridge should receive status and set-mode calls');
  console.log('PASS: original menu augmented, modes operational, other menus unchanged, no duplicate UI');
-})().catch(err=>{console.error(err);process.exitCode=1;}).finally(()=>dom.window.close());
+})().catch(err=>{console.error(err);process.exitCode=1;}).finally(()=>{dom.window.__claudebridgePickerDispose?.();dom.window.close();});
