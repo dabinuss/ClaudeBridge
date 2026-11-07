@@ -166,7 +166,9 @@ jobs:
           $zip = [System.IO.Compression.ZipFile]::Open($archivePath, [System.IO.Compression.ZipArchiveMode]::Update)
           try {
             $manifestPath = (Resolve-Path -LiteralPath "claude-plugin/.claude-plugin/plugin.json").Path
-            [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $manifestPath, "claude-plugin/.claude-plugin/plugin.json")
+            if ($null -eq $zip.GetEntry("claude-plugin/.claude-plugin/plugin.json")) {
+              [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $manifestPath, "claude-plugin/.claude-plugin/plugin.json")
+            }
           } finally {
             $zip.Dispose()
           }
