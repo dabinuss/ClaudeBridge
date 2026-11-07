@@ -22,7 +22,7 @@ button{cursor:pointer}button:disabled{opacity:.4;cursor:default}
 <div class="section">
 <div class="row"><strong>Codex CLI</strong><span class="status" id="installed">Checking…</span></div>
 <div class="row"><strong>ChatGPT sign-in</strong><span class="status" id="loginStatus">Checking…</span></div>
-<div class="actions"><button id="loginBtn">Connect ChatGPT</button><button id="refreshBtn">Refresh status</button></div>
+<div class="actions"><button id="installBtn" hidden>Install / Repair Codex</button><button id="loginBtn">Connect ChatGPT</button><button id="refreshBtn">Refresh status</button></div>
 </div>
 <div id="msg" aria-live="polite"></div>
 <script type="module">
@@ -44,16 +44,17 @@ async function refresh(){
   $('mode').value=config.mode;
   $('memory').checked=Boolean(config.memoryEnabled);
   $('explanation').textContent=explanation[config.mode]||'';
-  $('installed').textContent=health.codexInstalled?'Installed':'Not installed';
-  $('loginStatus').textContent=health.codexLogin==='signed_in'?'Connected':health.codexLogin==='not_signed_in'?'Sign-in required':health.codexLogin;
-  $('loginBtn').textContent=health.codexLogin==='signed_in'?'Codex connected':'Connect ChatGPT';
+  $('installed').textContent=health.codexInstalled?'Codex included':'Not installed';
+  $('installBtn').hidden=health.codexInstalled;
+  $('loginStatus').textContent=health.codexLogin==='signed_in'?'Codex already connected':health.codexLogin==='not_signed_in'?'Sign-in required':health.codexLogin;
+  $('loginBtn').textContent=health.codexLogin==='signed_in'?'Codex already integrated':'Connect ChatGPT';
   $('loginBtn').disabled=health.codexLogin==='signed_in'||!health.codexInstalled;
-  show('');
- }catch(e){show('Cannot refresh settings: '+e.message);}
+   }catch(e){show('Cannot refresh settings: '+e.message);}
 }
 $('mode').addEventListener('change',async e=>{try{await call('bridge_settings',{action:'set',mode:e.target.value});$('explanation').textContent=explanation[e.target.value];show('Mode saved.');}catch(err){show(err.message);}});
 $('memory').addEventListener('change',async e=>{try{await call('bridge_settings',{action:'set',memoryEnabled:e.target.checked});show('Working memory setting saved.');}catch(err){show(err.message);}});
 $('refreshBtn').addEventListener('click',refresh);
-$('loginBtn').addEventListener('click',async()=>{try{const r=await call('bridge_login',{});show(r.instructions||r.message||r.nextStep||'Follow ChatGPT sign-in instructions.');await refresh();}catch(e){show(e.message);}});
+$('installBtn').addEventListener('click',()=>app?.openLink({url:'https://github.com/dabinuss/ClaudeBridge/releases/tag/preview'}));
+$('loginBtn').addEventListener('click',async()=>{try{const r=await call('bridge_login',{});await refresh();show(r.instructions||r.message||r.nextStep||'Follow ChatGPT sign-in instructions.');}catch(e){show(e.message);}});
 if(app){app.ontoolresult=()=>refresh();await app.connect();await refresh();}else show('Interactive UI is not available in this Claude client. Use normal Claude chat to configure ClaudeBridge.');
 </script></body></html>
