@@ -99,6 +99,10 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item -LiteralPath (node -p "process.execPath") -Destination "integrations/native-ui/node.exe" -Force
+      - name: Test Windows native picker install and rollback
+        if: matrix.platform == 'win32'
+        shell: pwsh
+        run: ./tests/native-install.ps1
       - name: Bundle ClaudeBridge Extension
         shell: pwsh
         run: |
