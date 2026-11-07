@@ -9,7 +9,8 @@ const {spawnSync}=require('node:child_process');
 const root=path.resolve(__dirname,'..');
 const work=fs.mkdtempSync(path.join(os.tmpdir(),'cb-online-core-'));
 try{
- const r=spawnSync('unzip',['-q',path.join(root,'ClaudeBridge-Linux.mcpb'),'-d',work],{encoding:'utf8',timeout:45000});
+ const label=process.platform==='win32'?'Windows':process.platform==='darwin'?'macOS':'Linux';
+ const r=spawnSync('unzip',['-q',path.join(root,'ClaudeBridge-'+label+'.mcpb'),'-d',work],{encoding:'utf8',timeout:45000});
  if(r.status!==0)throw Error('Could not unpack compiled MCPB core: '+r.stderr);
  for(const relative of ['integrations/native-ui/node','integrations/native-ui/node.exe','vendor']){
   fs.rmSync(path.join(work,relative),{force:true,recursive:true});
