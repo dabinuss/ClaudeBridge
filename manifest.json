@@ -2,9 +2,9 @@
   "manifest_version": "0.3",
   "name": "claudebridge",
   "display_name": "ClaudeBridge",
-  "version": "2.1.0",
-  "description": "Connect Claude and Codex with project memory, preserved user requests, versioned plans and parallel coding.",
-  "long_description": "ClaudeBridge connects Codex CLI to Claude Desktop through MCP. Includes a bundled Codex CLI, supports multiple local projects, durable SQLite state, safe Git worktrees, independent tasks and plain-language operation. One-time ChatGPT sign-in is still required.",
+  "version": "2.2.0",
+  "description": "ClaudeBridge: Claude/Codex modes, an in-chat control panel, project memory, plans and parallel work.",
+  "long_description": "MCP-first Claude and Codex coordination. An interactive in-chat control panel provides Off, Manual, Fallback and Dual modes plus Codex installation and sign-in status. Built-in project memory, plans, task state and bundled Codex CLI.",
   "author": {
     "name": "ClaudeBridge contributors"
   },
@@ -30,6 +30,14 @@
     }
   },
   "tools": [
+    {
+      "name": "bridge_control_panel",
+      "description": "Open interactive mode and Codex account settings inside Claude."
+    },
+    {
+      "name": "bridge_settings",
+      "description": "Persist Off, Manual, Fallback, Dual modes and working memory settings."
+    },
     {
       "name": "bridge_health",
       "description": "Automatic setup and login diagnostic."
