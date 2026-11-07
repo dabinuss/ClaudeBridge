@@ -16,6 +16,8 @@ Manual source review of `server/index.js`, `manifest.json`, test suite, README a
 | High | Task event output and project handoff notes could grow without a bound. | Cap log volume, task history, and handoff notes; limit MCP message size. |
 | High | Child process cleanup raced with Windows file locks in CI. | Wait for child exit and retry cleanup in smoke tests. |
 | Medium | Excessive synchronous JSON writes for command-start events. | Throttle activity updates to at most approximately once per 1.5 seconds per job. |
+| High | Unbounded concurrent read-only Codex jobs could exhaust processes and memory. | Allow no more than 3 concurrent Codex jobs and time out tasks after 45 minutes. |
+| Medium | Setup checks did not distinguish installation from login state. | Call `codex login status` in the health check and return actionable English setup guidance. |
 | Medium | Shell-dependent CLI resolution and repeated lookup. | Resolve Codex once and cache the discovered executable path. |
 | Medium | Poor onboarding for non-technical users. | English quick start and plain-language example prompts; diagnostic next steps. |
 | Medium | Codex session IDs accepted without validation. | Validate UUID-like session identifiers before passing them as process arguments. |
