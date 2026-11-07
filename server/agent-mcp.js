@@ -2,6 +2,7 @@
 // Project-scoped MCP mailbox exposed only to a Codex worker for real-time collaboration.
 const readline=require('node:readline');
 const {openDb,task,message,messages}=require('./db');
+const plans=require('./plans');
 const [root,taskId]=process.argv.slice(2);
 if(!root||!/^[0-9a-f-]{36}$/i.test(taskId||'')){process.stderr.write('Invalid Codex mailbox configuration\n');process.exit(2);}
 const db=openDb({path:root});
@@ -14,7 +15,11 @@ const specs=[
 ];
 function respond(data){process.stdout.write(JSON.stringify(data)+'\n');}
 function tool(name,args){
- if(name==='read_messages')return {taskId,messages:messages(db,args.limit||30)};
+ if(name==='read_messages'){
+   const contract=plans.forTask(db,taskId);
+   return {taskId,messages:messages(db,args.limit||30),plan:contract,
+     planWarning:contract&&contract.currentVersion!==contract.plan_version?'The active plan has been revised since this task began. Stop conflicting work and request new instructions from Claude.':null};
+ }
  if(name==='send_message')return message(db,'codex',args.to||'claude',args.body,taskId);
  if(name==='checkpoint')return message(db,'codex','all',args.note,taskId);
  throw Error('Unknown mailbox tool');
