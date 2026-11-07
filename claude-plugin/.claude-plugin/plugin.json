@@ -1,0 +1,6 @@
+{
+  "name": "claudebridge",
+  "displayName": "ClaudeBridge",
+  "version": "2.6.0",
+  "description": "Control Codex delegation, project memory, plans and account status from Claude chats. Uses your locally installed ClaudeBridge MCP integration."
+}
