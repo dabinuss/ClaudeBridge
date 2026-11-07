@@ -44,6 +44,8 @@ jobs:
         run: node tests/smoke.js
       - name: Run v2 smoke tests
         run: node tests/v2.js
+      - name: Test two-agent mailbox
+        run: node tests/mailbox.js
       - name: Bundle Codex CLI for this platform
         run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex
       - name: Check bundled Codex CLI
