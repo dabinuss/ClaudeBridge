@@ -43,13 +43,17 @@ function currentProject(){
 function openDb(project){
   if(!project||!project.path)throw Error('No project selected. Ask Claude to connect a local code folder first.');
   const dir=path.join(project.path,'.agent-bridge');
-  if(fs.existsSync(dir)&&fs.lstatSync(dir).isSymbolicLink())
+  const isLink=file=>{
+    try{return fs.lstatSync(file).isSymbolicLink();}
+    catch(e){if(e.code==='ENOENT')return false;throw e;}
+  };
+  if(isLink(dir))
     throw Error('Refusing to write project state through a symlinked .agent-bridge directory');
   fs.mkdirSync(dir,{recursive:true,mode:0o700});
   const sqliteFile=path.join(dir,'state.sqlite');
   const gitignore=path.join(dir,'.gitignore');
   for(const file of [gitignore,sqliteFile]){
-    if(fs.existsSync(file)&&fs.lstatSync(file).isSymbolicLink())
+    if(isLink(file))
       throw Error('Refusing to access symlinked project state: '+path.basename(file));
   }
   if(!fs.existsSync(gitignore))fs.writeFileSync(gitignore,'*\n',{mode:0o600});
