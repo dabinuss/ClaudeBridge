@@ -3,8 +3,8 @@
   "name": "claudebridge",
   "display_name": "ClaudeBridge",
   "version": "2.6.0",
-  "description": "ClaudeBridge: compact verified online installers for Windows macOS Linux, with private Codex and Claude MCP.",
-  "long_description": "Run ClaudeBridge in Claude Desktop on Windows, macOS or Linux. The optional native model-menu launcher supplies Off, Manual, Fallback and Dual controls while preserving MCP, Codex login and project memory.",
+  "description": "ClaudeBridge local MCP tools, Codex account sign-in, collaborative tasks and project memory for the normal Claude Desktop client.",
+  "long_description": "ClaudeBridge works as a local MCP extension inside the standard Claude Desktop conversations. Supports Codex task delegation, persistent project plans, safe parallel worker workflows, and in-chat MCP App controls. Does not install another Claude launcher. Original Chat model dropdown customization remains an unmet product requirement.",
   "author": {
     "name": "ClaudeBridge contributors"
   },
@@ -40,7 +40,7 @@
     },
     {
       "name": "bridge_native_picker",
-      "description": "Install, inspect or remove native Claude model-menu controls on Windows, macOS or Linux."
+      "description": "Inspect or remove previous experimental ClaudeBridge alternate-launcher files; installation is disabled."
     },
     {
       "name": "bridge_health",
