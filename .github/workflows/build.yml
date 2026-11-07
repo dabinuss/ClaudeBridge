@@ -64,13 +64,15 @@ jobs:
         run: |
           node tests/settings.js
           node tests/picker.js
-      - name: Bundle Codex CLI and MCP Apps UI runtime
-        run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 @modelcontextprotocol/ext-apps@1.1.2 esbuild@0.25.12 @anthropic-ai/mcpb
+      - name: Bundle Codex CLI runtime
+        run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0
+      - name: Install build-only dependencies
+        run: npm install --prefix .builddeps --no-audit --no-fund --no-save @modelcontextprotocol/ext-apps@1.1.2 esbuild@0.25.12 @anthropic-ai/mcpb
       - name: Build bundled MCP Apps browser UI
         shell: bash
         run: |
-          cp ui/client.js vendor/claudebridge-ui-entry.js
-          npm exec --prefix vendor -- esbuild vendor/claudebridge-ui-entry.js --bundle --platform=browser --format=iife --minify --outfile=ui/control-panel.bundle.js
+          cp ui/client.js .builddeps/claudebridge-ui-entry.js
+          npm exec --prefix .builddeps -- esbuild .builddeps/claudebridge-ui-entry.js --bundle --platform=browser --format=iife --minify --outfile=ui/control-panel.bundle.js
       - name: Test interactive MCP panel
         run: node tests/ui.js
       - name: Check bundled Codex CLI
@@ -78,7 +80,7 @@ jobs:
         run: node vendor/node_modules/@openai/codex/bin/codex.js --version
       - name: Validate official MCPB manifest
         shell: bash
-        run: npm exec --prefix vendor -- mcpb validate manifest.json
+        run: npm exec --prefix .builddeps -- mcpb validate manifest.json
       - name: Set manifest platform
         shell: bash
         run: |
