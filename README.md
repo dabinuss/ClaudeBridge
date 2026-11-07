@@ -97,6 +97,32 @@ Plan revisions and approvals are auditable in the project SQLite database. The b
 
 Claude Desktop communicates with the ClaudeBridge MCP server. The server manages a local project registry at **~/.claudebridge/projects.json**. Each project stores its own SQLite database under **.agent-bridge/state.sqlite**. Codex tasks run as detached worker processes and record messages, progress, heartbeats, and session IDs.
 
+## Clean uninstall and data removal (Windows)
+
+ClaudeBridge has two independent components: an MCP Desktop Extension managed by Claude and an optional native model-picker companion. **Removing one does not automatically remove the other.**
+
+**Remove just the native model-menu controls:** Open ClaudeBridge settings and select **Remove integration**. This removes ClaudeBridge-owned shortcuts and companion files without changing Claude Desktop, its normal model list, or the MCP extension. If Windows has locked a running companion, completely quit Claude and rerun removal; the installer reports any remaining directory instead of claiming a clean uninstall.
+
+**Completely remove ClaudeBridge:**
+
+1. Fully quit Claude Desktop and stop running Codex tasks.
+2. Open Claude Desktop's **Extensions** settings and uninstall the ClaudeBridge MCPB. The Claude extension manager owns that installation.
+3. Run the optional cleanup tool `maintenance/cleanup.ps1` from an extracted ClaudeBridge source checkout to audit and remove user-local Bridge data. For permanent deletion, use explicit PowerShell switches:
+
+```powershell
+# See what is present without deleting anything
+.\maintenance\cleanup.ps1 -AuditOnly -PurgeBridgeState -PurgeProjectMemory
+
+# Permanently delete registered project memory and Bridge settings
+.\maintenance\cleanup.ps1 -PurgeProjectMemory -PurgeBridgeState
+```
+
+The cleanup tool asks for confirmation, never removes your actual project source directories, and never deletes global Codex or ChatGPT credentials. Project memory lives in each registered project's `.agent-bridge/` directory; the registry and settings live in `~/.claudebridge/`. Delete project memory **before** the registry, or use both switches together.
+
+For privacy, deliberately separate the persistent data deletion from normal extension uninstallation. If you want to keep your saved plans and project history, leave off both purge switches.
+
+**Limitations:** Microsoft Store/managed Claude installations may have different extension uninstall behavior. A locked native companion directory may need cleanup after the processes exit. An unregistered project directory or user-made backup is outside the tool's registry-based inventory. No application can guarantee removal of arbitrary copies, OS backups, or third-party caches.
+
 ## Important limitations
 
 - The optional Windows companion overlays ClaudeBridge controls into the original model menu. It is not automatically enabled by installing the MCPB; one-time shortcut activation and a full app restart are required.
