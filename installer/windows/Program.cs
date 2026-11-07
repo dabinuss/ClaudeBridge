@@ -1,0 +1,129 @@
+using System.Diagnostics;
+using System.IO.Compression;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.Json;
+
+internal static class Program
+{
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int MessageBoxW(IntPtr hWnd, string text, string caption, uint type);
+    private const uint YesNoCancel = 0x00000003;
+    private const uint YesNo = 0x00000004;
+    private const uint Information = 0x00000040;
+    private const uint Error = 0x00000010;
+    private const int Yes = 6;
+    private const int No = 7;
+    private const int Cancel = 2;
+
+    private static int Main(string[] args)
+    {
+        string? temp = null;
+        try
+        {
+            string mode = args.Any(a => a == "--uninstall") ? "uninstall" :
+                          args.Any(a => a == "--status") ? "status" : "install";
+            string basePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "ClaudeBridge", "Installed");
+            if (args.Length == 0)
+            {
+                bool present = File.Exists(Path.Combine(basePath, "installer-owned.json"));
+                int choice = MessageBoxW(IntPtr.Zero,
+                    present
+                    ? "ClaudeBridge is already installed.\n\nYes: Update / Repair\nNo: Uninstall\nCancel: Exit"
+                    : "Install ClaudeBridge MCP and the optional native Claude Desktop menu controls?\n\nYour original Claude installation will remain unchanged.",
+                    "ClaudeBridge Setup", present ? YesNoCancel | Information : YesNo | Information);
+                if (choice == Cancel || (!present && choice != Yes)) return 0;
+                mode = present && choice == No ? "uninstall" : "install";
+            }
+
+            temp = Path.Combine(Path.GetTempPath(), "ClaudeBridgeSetup-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(temp);
+            using (Stream? payload = Assembly.GetExecutingAssembly()
+                         .GetManifestResourceStream("ClaudeBridge.Payload"))
+            {
+                if (payload == null) throw new InvalidOperationException("The setup payload is missing.");
+                using ZipArchive zip = new ZipArchive(payload, ZipArchiveMode.Read);
+                long total = 0;
+                string extractionRoot = Path.GetFullPath(temp) + Path.DirectorySeparatorChar;
+                foreach (ZipArchiveEntry entry in zip.Entries)
+                {
+                    if (string.IsNullOrEmpty(entry.Name)) continue;
+                    if (entry.Length < 0 || entry.Length > 1024L * 1024 * 1024)
+                        throw new InvalidDataException("Invalid archive entry size.");
+                    total += entry.Length;
+                    if (total > 2048L * 1024 * 1024)
+                        throw new InvalidDataException("The installer payload is too large.");
+                    string destination = Path.GetFullPath(Path.Combine(temp, entry.FullName));
+                    if (!destination.StartsWith(extractionRoot, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidDataException("Unsafe archive entry path.");
+                    Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                    entry.ExtractToFile(destination, overwrite: true);
+                }
+            }
+            string node = Path.Combine(temp, "integrations", "native-ui", "node.exe");
+            string script = Path.Combine(temp, "installer", "setup.js");
+            if (!File.Exists(node) || !File.Exists(script))
+                throw new FileNotFoundException("The installer is missing Node or setup.js.");
+
+            using Process child = new Process();
+            child.StartInfo = new ProcessStartInfo(node)
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                WorkingDirectory = temp
+            };
+            child.StartInfo.ArgumentList.Add(script);
+            child.StartInfo.ArgumentList.Add(mode);
+            if (!child.Start()) throw new InvalidOperationException("Cannot start bundled installer.");
+
+            Task<string> outTask = child.StandardOutput.ReadToEndAsync();
+            Task<string> errTask = child.StandardError.ReadToEndAsync();
+            if (!child.WaitForExit(120000))
+            {
+                child.Kill(entireProcessTree: true);
+                throw new TimeoutException("ClaudeBridge installation exceeded the time limit.");
+            }
+            string output = outTask.GetAwaiter().GetResult().Trim();
+            string error = errTask.GetAwaiter().GetResult().Trim();
+            if (child.ExitCode != 0)
+                throw new Exception(string.IsNullOrWhiteSpace(error) ? output : error);
+            bool nativeOk = false;
+            if (!string.IsNullOrWhiteSpace(output))
+            {
+                using JsonDocument parsed = JsonDocument.Parse(output);
+                if (parsed.RootElement.TryGetProperty("native", out JsonElement native)
+                    && native.ValueKind == JsonValueKind.Object
+                    && native.TryGetProperty("installed", out JsonElement installed))
+                    nativeOk = installed.ValueKind == JsonValueKind.True;
+            }
+            string details = mode == "install"
+                ? "ClaudeBridge MCP has been registered.\n\n"
+                  + (nativeOk
+                  ? "The native menu launcher is installed. Fully exit Claude Desktop, then start 'ClaudeBridge Claude'."
+                  : "The native launcher could not be installed automatically. MCP is registered; check ClaudeBridge settings or run the installer again.")
+                  + "\n\nSign in to Codex once using your ChatGPT account."
+                : mode == "uninstall"
+                ? "ClaudeBridge's own MCP entry and native launcher have been removed where possible.\n\n"
+                  + "Your personal project memory is intentionally preserved."
+                : output;
+            MessageBoxW(IntPtr.Zero, details, "ClaudeBridge Setup", Information);
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            MessageBoxW(IntPtr.Zero, ex.Message, "ClaudeBridge Setup Error", Error);
+            Console.Error.WriteLine(ex);
+            return 1;
+        }
+        finally
+        {
+            if (temp != null)
+                try { Directory.Delete(temp, recursive: true); } catch { /* Windows may briefly lock the runtime */ }
+        }
+    }
+}
