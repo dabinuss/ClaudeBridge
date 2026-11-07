@@ -46,6 +46,19 @@ function main(){
   const script=path.join(root,'installer','setup.js');
   const r=run([script,'install']);
   process.stdout.write(r.stdout);
+  if(process.env.CLAUDEBRIDGE_SETUP_TEST_HOME||process.env.CLAUDEBRIDGE_SETUP_SKIP_NATIVE==='1'){
+   process.stdout.write('Ripple-lite activation deliberately omitted in test mode.\n');
+  }else{
+   const installed=process.platform==='win32'?
+    path.join(process.env.LOCALAPPDATA||path.join(os.homedir(),'AppData','Local'),'ClaudeBridge','Installed'):
+    process.platform==='darwin'?
+      path.join(os.homedir(),'Library','Application Support','ClaudeBridge','Installed'):
+      path.join(os.homedir(),'.local','share','claudebridge','Installed');
+   const activate=path.join(installed,'integrations','ripple-lite','activate.js');
+   const result=spawnSync(process.execPath,[activate,'enable',installed],
+    {stdio:'inherit',windowsHide:false,timeout:90000,shell:false});
+   if(result.status!==0)throw Error('Ripple-lite activation did not complete. Installation remains MCP-only; run activation again after resolving the error.');
+  }
   return;
  }
  if(action==='uninstall'||action==='status'){
