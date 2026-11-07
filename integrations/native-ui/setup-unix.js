@@ -140,6 +140,10 @@ function remove(){
  if(owner()){
   try{fs.rmSync(base,{recursive:true,force:true});}catch{pendingCleanup=true;}
  }
+ if(!pendingCleanup&&!fs.existsSync(base)){
+  const parent=path.dirname(base);
+  try{if(fs.readdirSync(parent).length===0)fs.rmdirSync(parent);}catch(e){if(e.code!=='ENOENT'&&e.code!=='ENOTEMPTY'&&e.code!=='EACCES')process.stderr.write('Launcher directory cleanup: '+e.message+'\n');}
+ }
  return {...status(),installed:false,pendingCleanup,
   remainingDirectory:fs.existsSync(base)?base:null,
   message:pendingCleanup?'Quit the enhanced Claude launcher and run removal again. Companion files remain locked.':'Native controls removed. Claude Desktop and MCP were not altered.'};
