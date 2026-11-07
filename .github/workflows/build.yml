@@ -160,6 +160,17 @@ jobs:
         run: |
           Compress-Archive -Path manifest.json,server,vendor,ui,integrations,maintenance,installer -DestinationPath "ClaudeBridge-${{ matrix.label }}.zip" -Force
           Rename-Item "ClaudeBridge-${{ matrix.label }}.zip" "ClaudeBridge-${{ matrix.label }}.mcpb"
+      - name: Verify complete Bridge is embedded and extracts offline
+        shell: bash
+        run: |
+          node installer/build-online.js
+          if [ "${{ matrix.platform }}" = "win32" ]; then
+            cmd.exe /c "ClaudeBridge-Setup-Windows.cmd --verify-core"
+          elif [ "${{ matrix.platform }}" = "darwin" ]; then
+            sh ClaudeBridge-Setup-macOS.command --verify-core
+          else
+            sh ClaudeBridge-Setup-Linux.run --verify-core
+          fi
       - name: Build Windows single-file Setup.exe
         if: matrix.platform == 'win32'
         shell: pwsh
