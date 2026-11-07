@@ -2,9 +2,9 @@
   "manifest_version": "0.3",
   "name": "claudebridge",
   "display_name": "ClaudeBridge",
-  "version": "1.0.1",
-  "description": "Connect Claude Desktop with Codex CLI for task delegation, progress tracking and project handoffs.",
-  "long_description": "Delegate coding and read-only review from Claude Desktop to Codex CLI. Local project handoffs, progress tracking, and session continuation. Use your existing Codex sign-in; no API key required.",
+  "version": "2.0.0",
+  "description": "Coordinate Claude and Codex naturally: multiple projects, isolated parallel tasks, persistent messages and recovery.",
+  "long_description": "ClaudeBridge connects Codex CLI to Claude Desktop through MCP. Includes a bundled Codex CLI, supports multiple local projects, durable SQLite state, safe Git worktrees, independent tasks and plain-language operation. One-time ChatGPT sign-in is still required.",
   "author": {
     "name": "ClaudeBridge contributors"
   },
@@ -16,58 +16,59 @@
       "linux"
     ],
     "runtimes": {
-      "node": ">=18.0.0"
+      "node": ">=22.13.0"
     }
   },
   "server": {
     "type": "node",
-    "entry_point": "server/index.js",
+    "entry_point": "server/v2.js",
     "mcp_config": {
       "command": "node",
       "args": [
-        "${__dirname}/server/index.js"
-      ],
-      "env": {
-        "BRIDGE_PROJECT": "${user_config.project_directory}"
-      }
-    }
-  },
-  "user_config": {
-    "project_directory": {
-      "type": "directory",
-      "title": "Project directory",
-      "description": "Choose the LOCAL source-code folder shared by Claude and Codex. You can change it later in Extension settings.",
-      "required": true
+        "${__dirname}/server/v2.js"
+      ]
     }
   },
   "tools": [
     {
       "name": "bridge_health",
-      "description": "Quick setup check: show whether Codex is installed, connected to the selected folder, and ready to accept tasks."
+      "description": "Automatic setup and login diagnostic."
+    },
+    {
+      "name": "bridge_project",
+      "description": "Connect, list or switch local project folders."
     },
     {
       "name": "bridge_delegate",
-      "description": "Start a project-scoped background Codex coding or review task."
+      "description": "Delegate parallel Codex coding or read-only reviews."
     },
     {
       "name": "bridge_status",
-      "description": "List or inspect Codex jobs and progress."
-    },
-    {
-      "name": "bridge_cancel",
-      "description": "Stop a running Codex task."
-    },
-    {
-      "name": "bridge_resume",
-      "description": "Continue a prior Codex session with new instructions."
-    },
-    {
-      "name": "bridge_checkpoint",
-      "description": "Save durable Claude/Codex project notes."
+      "description": "View current and completed tasks."
     },
     {
       "name": "bridge_context",
-      "description": "Read shared handoff notes and recent activity."
+      "description": "Read persisted agent messages and project history."
+    },
+    {
+      "name": "bridge_message",
+      "description": "Send persistent cross-agent messages."
+    },
+    {
+      "name": "bridge_checkpoint",
+      "description": "Save project decisions and handoffs."
+    },
+    {
+      "name": "bridge_cancel",
+      "description": "Cancel a Codex task."
+    },
+    {
+      "name": "bridge_resume",
+      "description": "Resume an interrupted Codex session."
+    },
+    {
+      "name": "bridge_login",
+      "description": "Guide one-time ChatGPT authentication."
     }
   ]
 }
