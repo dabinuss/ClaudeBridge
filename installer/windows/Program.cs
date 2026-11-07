@@ -28,6 +28,7 @@ internal static class Program
             string basePath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "ClaudeBridge", "Installed");
+            bool purgeData = args.Contains("--purge-data");
             if (args.Length == 0 && !unattended)
             {
                 bool present = File.Exists(Path.Combine(basePath, "installer-owned.json"));
@@ -38,6 +39,13 @@ internal static class Program
                     "ClaudeBridge Setup", present ? YesNoCancel | Information : YesNo | Information);
                 if (choice == Cancel || (!present && choice != Yes)) return 0;
                 mode = present && choice == No ? "uninstall" : "install";
+                if (mode == "uninstall")
+                {
+                    purgeData = MessageBoxW(IntPtr.Zero,
+                        "Also permanently delete ClaudeBridge settings, saved plans and registered project memory?\n\n"
+                        + "Yes: Remove all ClaudeBridge data\nNo: Keep project history\n\nYour source code is never deleted.",
+                        "ClaudeBridge Data Cleanup", YesNo | Information) == Yes;
+                }
             }
 
             temp = Path.Combine(Path.GetTempPath(), "ClaudeBridgeSetup-" + Guid.NewGuid().ToString("N"));
@@ -80,6 +88,7 @@ internal static class Program
             };
             child.StartInfo.ArgumentList.Add(script);
             child.StartInfo.ArgumentList.Add(mode);
+            if (purgeData && mode == "uninstall") child.StartInfo.ArgumentList.Add("--purge-data");
             if (!child.Start()) throw new InvalidOperationException("Cannot start bundled installer.");
 
             Task<string> outTask = child.StandardOutput.ReadToEndAsync();
@@ -110,7 +119,8 @@ internal static class Program
                   + "\n\nSign in to Codex once using your ChatGPT account."
                 : mode == "uninstall"
                 ? "ClaudeBridge's own MCP entry and native launcher have been removed where possible.\n\n"
-                  + "Your personal project memory is intentionally preserved."
+                  + (purgeData ? "The selected personal ClaudeBridge data cleanup was also requested." :
+                     "Your personal project memory has been preserved.")
                 : output;
             if (unattended) Console.WriteLine(output);
             else MessageBoxW(IntPtr.Zero, details, "ClaudeBridge Setup", Information);
