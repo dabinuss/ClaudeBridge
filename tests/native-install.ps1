@@ -10,7 +10,7 @@ try {
   if(-not $installed.installed) { throw "Native launcher did not report successful installation." }
   if(!(Test-Path $installed.shortcut)) { throw "Start Menu shortcut was not created." }
   $dest = Join-Path $env:CLAUDEBRIDGE_NATIVE_TEST_ROOT "NativePicker"
-  foreach($filename in @("node.exe","renderer.js","companion.js","cdp.js","launcher.vbs","settings.js","native-ui.json")) {
+  foreach($filename in @("node-path.txt","renderer.js","companion.js","cdp.js","launcher.vbs","settings.js","native-ui.json")) {
     if(!(Test-Path (Join-Path $dest $filename))) { throw "Missing copied launcher file: $filename" }
   }
   $status = (& $installer -Action status -ExtensionRoot $root | ConvertFrom-Json)
