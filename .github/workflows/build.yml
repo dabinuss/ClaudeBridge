@@ -48,7 +48,7 @@ jobs:
       - name: Test two-agent mailbox
         run: node tests/mailbox.js
       - name: Bundle Codex CLI for this platform
-        run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex
+        run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0
       - name: Check bundled Codex CLI
         shell: bash
         run: node vendor/node_modules/@openai/codex/bin/codex.js --version
@@ -88,13 +88,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: gh release delete-asset preview ClaudeBridge.mcpb -y 2>/dev/null || true
+      - name: Generate SHA-256 checksums
+        run: sha256sum ClaudeBridge-*.mcpb > SHA256SUMS
       - name: Publish preview installers
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           if gh release view preview >/dev/null 2>&1; then
-            gh release upload preview ClaudeBridge-*.mcpb --clobber
+            gh release upload preview ClaudeBridge-*.mcpb SHA256SUMS --clobber
           else
-            gh release create preview ClaudeBridge-*.mcpb --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Experimental cross-platform desktop extensions. Codex CLI is bundled. One-time ChatGPT sign-in remains required." --prerelease
+            gh release create preview ClaudeBridge-*.mcpb SHA256SUMS --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Experimental cross-platform desktop extensions. Codex CLI is bundled. One-time ChatGPT sign-in remains required." --prerelease
           fi
