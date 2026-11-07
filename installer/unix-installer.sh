@@ -2,6 +2,10 @@
 # ClaudeBridge all-in-one installer for macOS and Linux.
 set -eu
 MODE=install
+PURGE_DATA=0
+for opt in "$@"; do
+  if [ "$opt" = "--purge-data" ]; then PURGE_DATA=1; fi
+done
 case "${1:-}" in
   --uninstall|uninstall) MODE=uninstall ;;
   --status|status) MODE=status ;;
@@ -23,7 +27,14 @@ if [ "$#" -eq 0 ]; then
     read -r CHOICE
     case "$CHOICE" in
       1) MODE=install ;;
-      2) MODE=uninstall ;;
+      2)
+        MODE=uninstall
+        printf "Also permanently delete saved ClaudeBridge plans, settings and registered project memory? [y/N]: "
+        read -r DELETE_ANSWER
+        case "$DELETE_ANSWER" in
+          y|Y|yes|YES) PURGE_DATA=1 ;;
+        esac
+        ;;
       *) exit 0 ;;
     esac
   else
@@ -51,5 +62,9 @@ if [ ! -f "$NODE" ]; then
   exit 1
 fi
 chmod 700 "$NODE"
-"$NODE" "$TEMP_ROOT/installer/setup.js" "$MODE"
+if [ "$MODE" = "uninstall" ] && [ "$PURGE_DATA" = "1" ]; then
+  "$NODE" "$TEMP_ROOT/installer/setup.js" "$MODE" --purge-data
+else
+  "$NODE" "$TEMP_ROOT/installer/setup.js" "$MODE"
+fi
 exit "$?"
