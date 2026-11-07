@@ -49,7 +49,7 @@ class CDPPipe{
   for(const target of all.targetInfos||[])await this.attach(target);
  }
  isClaudeTarget(info){
-  if(!info||info.type!=='page')return false;
+  if(!info||!['page','webview','iframe'].includes(info.type))return false;
   const url=String(info.url||'');
   try{
    const parsed=new URL(url);
