@@ -150,9 +150,10 @@ function install(){
  configure('install');
  if(!backupExisted&&fs.existsSync(backup))
   writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.6.0',installedAt:new Date().toISOString(),backupCreated:true,configCreated})+'\n');
- let nativeResult={};
- try{nativeResult=native('install');}
- catch(e){nativeResult={installed:false,error:e.message};}
+ // ClaudeBridge must work through the original Claude Desktop launcher.
+ // The experimental CDP companion needs a second launcher and is not installed.
+ const nativeResult={installed:false,skipped:true,
+  reason:'Legacy launcher integration is disabled; native Chat model-menu support remains unverified.'};
  log(JSON.stringify({ok:true,mcp:true,native:nativeResult,config:configPath,
   message:'ClaudeBridge MCP registered. Quit Claude completely and relaunch using ClaudeBridge Claude if the native launcher was installed. Log into Codex once.'}));
 }
