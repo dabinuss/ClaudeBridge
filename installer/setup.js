@@ -22,7 +22,7 @@ const configPath=testHome?path.join(testHome,'Claude','claude_desktop_config.jso
   platform==='darwin'?path.join(home,'Library','Application Support','Claude','claude_desktop_config.json'):
   path.join(home,'.config','Claude','claude_desktop_config.json');
 const SERVER_KEY='claudebridge';
-const payloadFiles=['manifest.json','server','vendor','ui','integrations'];
+const payloadFiles=['manifest.json','server','vendor','ui','integrations','installer'];
 const log=(...args)=>process.stdout.write(args.join(' ')+'\n');
 const isLink=p=>{try{return fs.lstatSync(p).isSymbolicLink();}catch(e){if(e.code==='ENOENT')return false;throw e;}};
 function assertSafe(p){if(isLink(p))throw Error('Refusing symlink path: '+p);}
