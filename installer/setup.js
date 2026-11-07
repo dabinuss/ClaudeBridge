@@ -119,14 +119,14 @@ function native(action){
 }
 function copyItem(src,dst){
  const st=fs.lstatSync(src);
- if(st.isSymbolicLink())throw Error('Symbolic links in installer payload are not permitted: '+src);
+ if(st.isSymbolicLink())return; // npm-generated .bin links are not required by the direct Codex launcher.
  if(st.isDirectory()){
   mkdir(dst);
   for(const child of fs.readdirSync(src))copyItem(path.join(src,child),path.join(dst,child));
  }else if(st.isFile()){
   mkdir(path.dirname(dst));assertSafe(dst);
   fs.copyFileSync(src,dst);
-  fs.chmodSync(dst,(/\/node$|\/node.exe$/).test(dst.replaceAll('\\','/'))?0o700:0o600);
+  fs.chmodSync(dst,(st.mode & 0o111)?0o700:0o600);
  }else throw Error('Unexpected payload object: '+src);
 }
 function install(){
@@ -139,8 +139,14 @@ function install(){
  }
  mkdir(installPath);
  for(const file of payloadFiles)copyItem(path.join(root,file),path.join(installPath,file));
- writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.5.0',installedAt:new Date().toISOString()})+'\n');
+ const backup=configPath+'.claudebridge-backup';
+ const existingOwner=cleanFile(marker);
+ const previouslyOwned=existingOwner?JSON.parse(existingOwner).backupCreated===true:false;
+ const backupExisted=fs.existsSync(backup);
+ writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.5.0',installedAt:new Date().toISOString(),backupCreated:previouslyOwned})+'\n');
  configure('install');
+ if(!backupExisted&&fs.existsSync(backup))
+  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.5.0',installedAt:new Date().toISOString(),backupCreated:true})+'\n');
  let nativeResult={};
  try{nativeResult=native('install');}
  catch(e){nativeResult={installed:false,error:e.message};}
@@ -156,7 +162,12 @@ function uninstall(){
  let nativeResult;
  try{nativeResult=native('remove');}
  catch(e){nativeResult={error:e.message};}
+ const oldMarker=JSON.parse(fs.readFileSync(marker,'utf8'));
  const changed=configure('remove',true);
+ if(oldMarker.backupCreated===true){
+  const backup=configPath+'.claudebridge-backup';
+  if(fs.existsSync(backup)&&!isLink(backup))fs.rmSync(backup,{force:true});
+ }
  let residual=null;
  try{fs.rmSync(installPath,{recursive:true,force:true,maxRetries:3,retryDelay:200});}
  catch(e){residual=installPath+' ('+e.message+')';}
