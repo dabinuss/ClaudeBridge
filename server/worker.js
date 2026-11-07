@@ -52,6 +52,9 @@ try{
   const previousTask=t.previous?task(db,t.previous):null;
   if(t.previous&&(!previousTask||!previousTask.session_id))throw Error('Previous Codex session is not available for resume.');
   const args=t.previous?['exec','resume',previousTask.session_id,'--json','-']:['exec','--json','--sandbox',t.mode==='review'?'read-only':'workspace-write'];
+  const mailbox=path.join(__dirname,'agent-mcp.js');
+  args.push('-c','mcp_servers.claudebridge_mailbox.command='+JSON.stringify(process.execPath));
+  args.push('-c','mcp_servers.claudebridge_mailbox.args='+JSON.stringify([mailbox,projectPath,id]));
   if(!t.previous&&t.worktree&&t.mode==='code')args.push('--worktree');
   args.push('-');
   const context=db.prepare('SELECT sender,body FROM messages ORDER BY created DESC LIMIT 30').all().reverse();
@@ -61,6 +64,7 @@ try{
     'Mode: '+t.mode,
     'Do not edit .agent-bridge or the SQLite database.',
     'For parallel work, keep changes isolated to the Codex-managed Git worktree. Never merge automatically.',
+    'The ClaudeBridge mailbox MCP server is available: use read_messages at the start and when you need updates; send_message to tell Claude about blockers or progress; checkpoint important decisions. Never wait indefinitely for a reply.',
     'Report work performed, files changed, tests, blockers, and concrete next steps.',
     'Messages from Claude and other agents:',
     ...context.map(x=>x.sender+': '+x.body),
