@@ -22,8 +22,8 @@ try{
  const cfg=path.join(testHome,'Claude','claude_desktop_config.json');
  make(path.dirname(cfg));
  fs.writeFileSync(cfg,JSON.stringify({mcpServers:{'another-server':{command:'another',args:['--leave-alone']}},otherSetting:'keep'}));
- function call(action,expect=0){
-  const r=spawnSync(process.execPath,[path.join(fixture,'installer','setup.js'),action],{encoding:'utf8',env,timeout:25000});
+ function call(action,expect=0,flags=[]){
+  const r=spawnSync(process.execPath,[path.join(fixture,'installer','setup.js'),action,...flags],{encoding:'utf8',env,timeout:25000});
   assert.equal(r.status,expect,r.stderr+'\n'+r.stdout);
   return r.stdout.trim()?JSON.parse(r.stdout):null;
  }
@@ -43,7 +43,25 @@ try{
  assert(!c.mcpServers.claudebridge);
  assert.equal(c.mcpServers['another-server'].command,'another');
  assert.equal(c.otherSetting,'keep');
- assert(!fs.existsSync(path.join(testHome,process.platform==='win32'?'Installed':path.join('..','Installed')))||!call('status').installed);
+ assert(!call('status').installed);
+ assert(!fs.existsSync(cfg+'.claudebridge-backup'),'Owned backup must be removed on uninstall');
+ // Reinstall and exercise the optional full cleanup without touching source files.
+ call('install');
+ const project=path.join(temp,'user-source-project');
+ const mem=path.join(project,'.agent-bridge');
+ make(mem);
+ fs.writeFileSync(path.join(project,'app.js'),'KEEP MY CODE');
+ fs.writeFileSync(path.join(mem,'state.sqlite'),'mock database');
+ fs.writeFileSync(path.join(mem,'.gitignore'),'*');
+ const shared=path.join(testHome,'.claudebridge');
+ make(shared);
+ fs.writeFileSync(path.join(shared,'settings.json'),'{"mode":"dual"}');
+ fs.writeFileSync(path.join(shared,'projects.json'),JSON.stringify({active:'project',projects:{project:{name:'Project',path:project}}}));
+ const purged=call('uninstall',0,['--purge-data']);
+ assert.equal(purged.projectMemoryPreserved,false);
+ assert(!fs.existsSync(mem),'Bridge memory was not removed');
+ assert(!fs.existsSync(shared),'ClaudeBridge settings remain');
+ assert(fs.existsSync(path.join(project,'app.js')),'Source project was modified');
  // Refuse to overwrite or delete other parties' ClaudeBridge entries.
  c.mcpServers.claudebridge={command:'other',args:['someone-elses-server']};
  fs.writeFileSync(cfg,JSON.stringify(c));
