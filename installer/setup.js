@@ -141,12 +141,14 @@ function install(){
  for(const file of payloadFiles)copyItem(path.join(root,file),path.join(installPath,file));
  const backup=configPath+'.claudebridge-backup';
  const existingOwner=cleanFile(marker);
- const previouslyOwned=existingOwner?JSON.parse(existingOwner).backupCreated===true:false;
+ const existingData=existingOwner?JSON.parse(existingOwner):{};
+ const previouslyOwned=existingData.backupCreated===true;
+ const configCreated=existingData.configCreated===true||!fs.existsSync(configPath);
  const backupExisted=fs.existsSync(backup);
- writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.5.0',installedAt:new Date().toISOString(),backupCreated:previouslyOwned})+'\n');
+ writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.5.0',installedAt:new Date().toISOString(),backupCreated:previouslyOwned,configCreated})+'\n');
  configure('install');
  if(!backupExisted&&fs.existsSync(backup))
-  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.5.0',installedAt:new Date().toISOString(),backupCreated:true})+'\n');
+  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.5.0',installedAt:new Date().toISOString(),backupCreated:true,configCreated})+'\n');
  let nativeResult={};
  try{nativeResult=native('install');}
  catch(e){nativeResult={installed:false,error:e.message};}
@@ -167,6 +169,13 @@ function uninstall(){
  if(oldMarker.backupCreated===true){
   const backup=configPath+'.claudebridge-backup';
   if(fs.existsSync(backup)&&!isLink(backup))fs.rmSync(backup,{force:true});
+ }
+ if(oldMarker.configCreated===true&&fs.existsSync(configPath)){
+  const data=jsonFile(configPath);
+  if(Object.keys(data).every(k=>k==='mcpServers')&&Object.keys(data.mcpServers||{}).length===0){
+   assertSafe(configPath);
+   fs.rmSync(configPath,{force:true});
+  }
  }
  let residual=null;
  try{fs.rmSync(installPath,{recursive:true,force:true,maxRetries:3,retryDelay:200});}
