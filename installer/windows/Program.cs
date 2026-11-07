@@ -20,9 +20,9 @@ internal static class Program
     private static int Main(string[] args)
     {
         string? temp = null;
+        bool unattended = args.Contains("--quiet") || Environment.GetEnvironmentVariable("CLAUDEBRIDGE_SETUP_TEST_HOME") != null;
         try
         {
-            bool unattended = args.Contains("--quiet") || Environment.GetEnvironmentVariable("CLAUDEBRIDGE_SETUP_TEST_HOME") != null;
             string mode = args.Any(a => a == "--uninstall") ? "uninstall" :
                           args.Any(a => a == "--status") ? "status" : "install";
             string basePath = Path.Combine(
