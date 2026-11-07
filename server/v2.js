@@ -74,7 +74,7 @@ function nativePicker(args={}){
   if(!fs.existsSync(script))throw Error('Native picker installer is missing. Update ClaudeBridge.');
   if(action==='status'){
     const destination=path.join(process.env.LOCALAPPDATA||path.join(os.homedir(),'AppData','Local'),'ClaudeBridge','NativePicker');
-    const installed=fs.existsSync(path.join(destination,'companion.js'))&&fs.existsSync(path.join(destination,'node.exe'));
+    const installed=fs.existsSync(path.join(destination,'companion.js'))&&fs.existsSync(path.join(destination,'node-path.txt'));
     return {supported:true,installed,
       mode:'optional_renderer_companion',requiresRestart:true,
       nextStep:installed?'Quit Claude completely and open the ClaudeBridge Claude shortcut.':'Install the optional native picker from ClaudeBridge settings.'};
