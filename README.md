@@ -26,7 +26,7 @@ The installer automatically registers `claudebridge` in the **documented local C
 
 After installing, **fully quit Claude Desktop**, reopen using the new **ClaudeBridge Claude** launcher if native integration succeeded, and sign in to Codex with your ChatGPT account once. The original Claude app and model choices are not modified. In restricted Claude Desktop packaging, native integration may fail while the MCP server is still correctly registered; the installer reports this rather than claiming full success.
 
-**Uninstall:** Reopen the same setup file, choose uninstall (Windows), or run the .command/.run file again and choose uninstall (macOS/Linux). The managed `claudebridge` MCP entry, installed program files and owned native launcher are removed. Your source-code projects and saved Bridge project memory are preserved by default; remove the latter only with explicit cleanup switches described below.
+**Uninstall:** Reopen the **same setup file** and choose **Uninstall**. It asks whether to retain or delete your saved ClaudeBridge plans, settings and registered project memories. The installer removes its own `claudebridge` MCP entry, program files, and native launcher. It never deletes your source-code projects or unrelated MCP servers. Even after removing the setup itself, any cached OS backup or manually copied data remains outside its control.
 
 The optional `.mcpb` packages remain available as an alternate manual installation path. Do not install both setup modes simultaneously unless you intentionally want two ClaudeBridge registrations.
 
