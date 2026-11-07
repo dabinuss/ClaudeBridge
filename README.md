@@ -2,13 +2,13 @@
 
 **Use Claude Desktop and Codex CLI together through ordinary Claude conversations. No slash commands required.**
 
-![Version](https://img.shields.io/badge/version-2.2.1--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
+![Version](https://img.shields.io/badge/version-2.3.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
 
-> Preview: ClaudeBridge runs as an MCP Desktop Extension. It cannot change the proprietary Claude chat UI, read hidden Claude conversation context, or bypass subscription limits.
+> Preview: ClaudeBridge is an MCP Desktop Extension with an **optional Windows native model-menu companion**. The companion adds UI controls, not an alternative language model; it never intercepts network requests or replaces MCP. Authenticated Claude Desktop testing is still required.
 
 ## ClaudeBridge control panel inside Claude
 
-ClaudeBridge 2.2.1 includes an interactive **MCP Apps** control panel without replacing the MCP bridge. In your Claude conversation, ask:
+ClaudeBridge 2.3.0 includes an interactive **MCP Apps** control panel without replacing the MCP bridge. In your Claude conversation, ask:
 
 > **Open ClaudeBridge settings.**
 
@@ -23,11 +23,25 @@ When your Claude Desktop build supports local MCP Apps rendering, the panel appe
 
 The same settings are available to Claude as MCP tools through normal-language requests. No slash commands are needed.
 
-### Experimental native model-picker integration
+## Native model-picker controls (Windows preview)
 
-The repository includes `integrations/picker.js`, a tested, **opt-in bootstrap adapter** that adds a ClaudeBridge row only to Claude **Code/Cowork** model surfaces. It is **not currently wired to Claude Desktop's network bootstrap or model-response routing**, so installing the MCPB does not yet add the row to the model-picker dropdown from your screenshot. Do not treat that row as an operational model until routing is implemented and tested.
+ClaudeBridge now includes an optional **native model-menu companion for Windows**. It inserts a ClaudeBridge control section into Claude Desktop's existing model dropdown while preserving the original Claude model selections.
 
-See [Native picker integration notes](docs/NATIVE-PICKER.md). The model picker and MCP Apps panel are different surfaces. The MCP tools continue working independently of any experimental picker integration.
+The native section offers **Off**, **On demand**, **Fallback**, **Dual agents**, **Codex installed/connected status**, **Connect Codex**, and **Install / Repair**. Mode changes write to the same project-specific settings used by MCP.
+
+**Set up:**
+
+1. Install the Windows `.mcpb` extension normally. The Codex CLI and the optional native companion runtime are bundled.
+2. Tell Claude **“Open ClaudeBridge settings”**, then click **“Enable in model menu”**. This installs a user-scoped *ClaudeBridge Claude* shortcut. No system certificate or proxy is installed.
+3. **Fully quit Claude Desktop**, including its background process. Launch **ClaudeBridge Claude** from the new desktop/Start Menu shortcut. Open the existing model dropdown to see the additional ClaudeBridge controls.
+
+The native menu companion is distinct from the prototype `integrations/picker.js`, which would advertise a fake model ID and still lacks routing. The **new companion instead adds settings to the existing menu** without pretending to be a language model. It starts Claude Desktop with Chromium's local **debugging pipe**, attaches only to Claude renderer pages, and injects the controls. There is no open debugging TCP port.
+
+To undo it, click **Remove integration** from the ClaudeBridge MCP App settings. Your regular Claude shortcut, original Claude model choices, files, and MCP extension remain intact. If Claude is currently using the companion launcher, close it before cleaning up locked files.
+
+**Compatibility status:** Automated tests exercise DOM insertion, mode-selection requests, debugging-pipe protocol handling, and Windows shortcut creation/removal. These do **not** prove compatibility with every real Claude Desktop version or installer type. Microsoft Store-only installations may not allow this custom launch method. If the companion cannot start, continue using the normal MCP App panel.
+
+See [Native model-menu integration details](docs/NATIVE-PICKER.md).
 
 ## Easy installation
 
@@ -85,7 +99,7 @@ Claude Desktop communicates with the ClaudeBridge MCP server. The server manages
 
 ## Important limitations
 
-- Claude Desktop's existing UI is reused through MCP tools, not modified with new native buttons, chat tabs or menus.
+- The optional Windows companion overlays ClaudeBridge controls into the original model menu. It is not automatically enabled by installing the MCPB; one-time shortcut activation and a full app restart are required.
 - One-time ChatGPT login cannot be completed without your approval.
 - Claude Projects conversation data is not automatically mirrored to the local project folders.
 - A live Codex turn does not automatically read messages that arrive after the turn started; the messages are stored for later tasks.
@@ -100,6 +114,7 @@ Claude Desktop communicates with the ClaudeBridge MCP server. The server manages
 ```bash
 node tests/smoke.js
 node tests/v2.js
+node tests/native-cdp.js
 ```
 
 Platform-specific installers with bundled Codex CLI are assembled by [GitHub Actions](https://github.com/dabinuss/ClaudeBridge/actions) and published only after the full CI matrix passes.
