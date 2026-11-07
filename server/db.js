@@ -44,6 +44,8 @@ function openDb(project){
   if(!project||!project.path)throw Error('No project selected. Ask Claude to connect a local code folder first.');
   const dir=path.join(project.path,'.agent-bridge');
   fs.mkdirSync(dir,{recursive:true});
+  const gitignore=path.join(dir,'.gitignore');
+  if(!fs.existsSync(gitignore))fs.writeFileSync(gitignore,'*\n',{mode:0o600});
   const db=new DatabaseSync(path.join(dir,'state.sqlite'),{timeout:5000});
   db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');
   db.exec("CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, mode TEXT NOT NULL, prompt TEXT NOT NULL, status TEXT NOT NULL, session_id TEXT, pid INTEGER, created TEXT NOT NULL, updated TEXT NOT NULL, last_message TEXT DEFAULT '', error TEXT, project_path TEXT NOT NULL, worktree INTEGER DEFAULT 0, exit_code INTEGER, heart_beat TEXT, last_activity TEXT DEFAULT '', previous TEXT);");
