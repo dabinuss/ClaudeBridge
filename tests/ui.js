@@ -27,6 +27,10 @@ function request(method,params={}){
  assert.match(settingsPrompt.messages[0].content.text,/bridge_health/);
  const dualPrompt=await request('prompts/get',{name:'claudebridge-dual',arguments:{task:'Review this worktree'}});
  assert.match(dualPrompt.messages[0].content.text,/Review this worktree/);
+ // The regular Chat client must never gain a second Claude Desktop launcher.
+ const blocked=await request('tools/call',{name:'bridge_native_picker',arguments:{action:'install'}});
+ assert.equal(blocked.isError,true,'Legacy alternate launcher must be disabled');
+ assert.match(blocked.content[0].text,/disabled/i);
  const list=await request('tools/list');
  assert(list.tools.some(x=>x.name==='bridge_control_panel'&&x._meta?.ui?.resourceUri));
  const resources=await request('resources/list');
