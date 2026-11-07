@@ -49,6 +49,8 @@ jobs:
           node --check integrations/picker.js
           node --check server/process-tree.js
           node --check ui/client.js
+          node --check integrations/native-ui/renderer.js
+          node --check integrations/native-ui/companion.js
       - name: Run legacy smoke tests
         run: node tests/smoke.js
       - name: Run v2 smoke tests
@@ -87,10 +89,15 @@ jobs:
         shell: bash
         run: |
           node -e 'const fs=require("fs");const m=require("./manifest.json");m.compatibility.platforms=[process.argv[1]];fs.writeFileSync("manifest.json",JSON.stringify(m,null,2)+"\n")' ${{ matrix.platform }}
+      - name: Include user-scoped Windows native picker launcher
+        if: matrix.platform == 'win32'
+        shell: pwsh
+        run: |
+          Copy-Item -LiteralPath (node -p "process.execPath") -Destination "integrations/native-ui/node.exe" -Force
       - name: Bundle ClaudeBridge Extension
         shell: pwsh
         run: |
-          Compress-Archive -Path manifest.json,server,vendor,ui -DestinationPath "ClaudeBridge-${{ matrix.label }}.zip" -Force
+          Compress-Archive -Path manifest.json,server,vendor,ui,integrations -DestinationPath "ClaudeBridge-${{ matrix.label }}.zip" -Force
           Rename-Item "ClaudeBridge-${{ matrix.label }}.zip" "ClaudeBridge-${{ matrix.label }}.mcpb"
       - name: Upload build
         uses: actions/upload-artifact@v4
