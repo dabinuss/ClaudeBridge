@@ -40,6 +40,7 @@ jobs:
           node --check server/db.js
           node --check server/worker.js
           node --check server/agent-mcp.js
+          node --check server/watchdog.js
       - name: Run legacy smoke tests
         run: node tests/smoke.js
       - name: Run v2 smoke tests
