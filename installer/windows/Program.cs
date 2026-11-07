@@ -22,12 +22,13 @@ internal static class Program
         string? temp = null;
         try
         {
+            bool unattended = args.Contains("--quiet") || Environment.GetEnvironmentVariable("CLAUDEBRIDGE_SETUP_TEST_HOME") != null;
             string mode = args.Any(a => a == "--uninstall") ? "uninstall" :
                           args.Any(a => a == "--status") ? "status" : "install";
             string basePath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "ClaudeBridge", "Installed");
-            if (args.Length == 0)
+            if (args.Length == 0 && !unattended)
             {
                 bool present = File.Exists(Path.Combine(basePath, "installer-owned.json"));
                 int choice = MessageBoxW(IntPtr.Zero,
@@ -111,12 +112,13 @@ internal static class Program
                 ? "ClaudeBridge's own MCP entry and native launcher have been removed where possible.\n\n"
                   + "Your personal project memory is intentionally preserved."
                 : output;
-            MessageBoxW(IntPtr.Zero, details, "ClaudeBridge Setup", Information);
+            if (unattended) Console.WriteLine(output);
+            else MessageBoxW(IntPtr.Zero, details, "ClaudeBridge Setup", Information);
             return 0;
         }
         catch (Exception ex)
         {
-            MessageBoxW(IntPtr.Zero, ex.Message, "ClaudeBridge Setup Error", Error);
+            if (!unattended) MessageBoxW(IntPtr.Zero, ex.Message, "ClaudeBridge Setup Error", Error);
             Console.Error.WriteLine(ex);
             return 1;
         }
