@@ -73,7 +73,7 @@ function makePickerProxy({dir,host='127.0.0.1',port=0,models=[],upstream='claude
     res.end(JSON.stringify(result));
    });return;
   }
-  function forward(buffer){
+  function forward(buffer,continueStream=false){
    const headers={...req.headers,host:target};
    delete headers['proxy-authorization'];delete headers['proxy-connection'];
    const upstreamReq=request({hostname:target,servername:target,port:443,method:req.method,
@@ -111,16 +111,25 @@ function makePickerProxy({dir,host='127.0.0.1',port=0,models=[],upstream='claude
    });
    upstreamReq.on('error',()=>{counters.errors++;if(!res.headersSent){res.writeHead(502);res.end();}else res.destroy();});
    req.on('aborted',()=>upstreamReq.destroy());
-   if(buffer)upstreamReq.end(buffer);else req.pipe(upstreamReq);
+   if(continueStream){if(buffer?.length)upstreamReq.write(buffer);req.pipe(upstreamReq);}
+   else if(buffer)upstreamReq.end(buffer);else req.pipe(upstreamReq);
   }
   if(target!=='api.anthropic.com'||path!=='/v1/messages'||req.method!=='POST'){forward();return;}
-  const chunks=[];let size=0;
+  if(Number(req.headers['content-length']||0)>MAX_BODY||
+     !String(req.headers['content-type']||'').toLowerCase().includes('application/json')){
+   forward();return;
+  }
+  const chunks=[];let size=0,oversized=false;
   req.on('data',piece=>{
-   size+=piece.length;
-   if(size>MAX_BODY){req.destroy();return;}
-   chunks.push(piece);
+   if(oversized)return;
+   size+=piece.length;chunks.push(piece);
+   if(size>MAX_BODY){
+    oversized=true;
+    forward(Buffer.concat(chunks),true);
+   }
   });
   req.on('end',async()=>{
+   if(oversized)return;
    const body=Buffer.concat(chunks);
    let payload;try{payload=JSON.parse(body.toString('utf8'));}catch{forward(body);return;}
    if(payload?.model!==ROUTE_ID){forward(body);return;}
