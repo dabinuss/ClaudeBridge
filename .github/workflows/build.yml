@@ -64,6 +64,8 @@ jobs:
         run: |
           node tests/settings.js
           node tests/picker.js
+      - name: Test Codex cancellation and child cleanup
+        run: node tests/cancel.js
       - name: Bundle Codex CLI runtime
         run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0
       - name: Install build-only dependencies
