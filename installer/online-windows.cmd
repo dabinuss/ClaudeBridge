@@ -2,7 +2,7 @@
 setlocal
 set "CLAUDEBRIDGE_SETUP_SCRIPT=%~f0"
 set "CLAUDEBRIDGE_SETUP_ARGS=%*"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$s=[IO.File]::ReadAllText($env:CLAUDEBRIDGE_SETUP_SCRIPT); $mark='# CLAUDEBRIDGE POWERSHELL START'; $pos=$s.IndexOf($mark); if($pos -lt 0){throw 'Invalid setup file'}; Invoke-Expression $s.Substring($pos + $mark.Length)"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$s=[IO.File]::ReadAllText($env:CLAUDEBRIDGE_SETUP_SCRIPT); $mark=('# CLAUDEBRIDGE'+' POWERSHELL START'); $pos=$s.IndexOf($mark); if($pos -lt 0){throw 'Invalid setup file'}; Invoke-Expression $s.Substring($pos + $mark.Length)"
 exit /b %errorlevel%
 # CLAUDEBRIDGE POWERSHELL START
 $ErrorActionPreference='Stop'
