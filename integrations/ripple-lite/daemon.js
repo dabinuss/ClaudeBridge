@@ -1,7 +1,7 @@
 'use strict';
 // ClaudeBridge Ripple-lite user process. Installed separately from Claude Desktop;
 // the original Claude shortcut remains untouched.
-const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),crypto=require('node:crypto');
 const {spawnSync}=require('node:child_process');
 const {makePickerProxy}=require('./proxy');
 const {ROUTE_ID,codexPath}=require('./codex-model');
@@ -15,16 +15,19 @@ function models(base=path.resolve(__dirname,'../..')){
 }
 async function main(){
  const dir=root();fs.mkdirSync(dir,{recursive:true,mode:0o700});
- const picker=makePickerProxy({dir:path.join(dir,'certs'),port:PORT,models:models()});
- const address=await picker.listen();
+ const token=crypto.randomBytes(32).toString('hex');
  const state=path.join(dir,'daemon.json');
- fs.writeFileSync(state,JSON.stringify({pid:process.pid,port:address.port,started:new Date().toISOString()}),{mode:0o600});
- let stopping=false;
+ let picker,stopping=false;
  const stop=()=>{
   if(stopping)return;stopping=true;
   try{fs.rmSync(state,{force:true});}catch{}
   picker.close().finally(()=>process.exit(0));
  };
+ picker=makePickerProxy({dir:path.join(dir,'certs'),port:PORT,models:models(),
+  controlToken:token,onShutdown:stop});
+ const address=await picker.listen();
+ fs.writeFileSync(state,JSON.stringify({pid:process.pid,port:address.port,
+  token,started:new Date().toISOString()}),{mode:0o600});
  process.on('SIGINT',stop);process.on('SIGTERM',stop);
  process.stdout.write('ClaudeBridge Ripple-lite proxy listening on 127.0.0.1:'+address.port+'\n');
 }
