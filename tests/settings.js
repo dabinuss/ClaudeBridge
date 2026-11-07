@@ -12,6 +12,11 @@ try{
  assert.equal(cfg.write({mode:'fallback',memoryEnabled:false}).memoryEnabled,false);
  assert.equal(cfg.read().mode,'fallback');
  assert.equal(cfg.write({mode:'off'}).enabled,false);
+ assert.equal(cfg.write({mode:'dual'},'project-one').mode,'dual');
+ assert.equal(cfg.read('project-one').mode,'dual');
+ assert.equal(cfg.read('project-two').mode,'off');
+ assert.equal(cfg.write({mode:'manual'},'project-two').mode,'manual');
+ assert.equal(cfg.read('project-one').mode,'dual');
  assert.throws(()=>cfg.write({mode:'invalid'}));
  console.log('PASS: persistent Off Manual Fallback Dual settings');
 }finally{
