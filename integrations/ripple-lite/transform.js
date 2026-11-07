@@ -29,7 +29,7 @@ function transformBootstrap({pathname,body,headers={},models=[]}){
   encoding==='deflate'?zlib.deflateSync(updated):updated;
  // Preserve caller's header casing, only replace affected entity metadata.
  const out={...headers};
- for(const key of Object.keys(out))if(['content-length','etag','content-md5','digest'].includes(key.toLowerCase()))delete out[key];
+ for(const key of Object.keys(out))if(['content-length','transfer-encoding','etag','content-md5','digest','content-range'].includes(key.toLowerCase()))delete out[key];
  out['content-length']=String(compressed.length);
  out['cache-control']='no-store';
  return {changed:true,body:compressed,headers:out,result};
