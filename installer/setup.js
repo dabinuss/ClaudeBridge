@@ -155,6 +155,38 @@ function install(){
  log(JSON.stringify({ok:true,mcp:true,native:nativeResult,config:configPath,
   message:'ClaudeBridge MCP registered. Quit Claude completely and relaunch using ClaudeBridge Claude if the native launcher was installed. Log into Codex once.'}));
 }
+function purgePrivateMemory(){
+ const bridgeHome=process.env.CLAUDEBRIDGE_SETUP_TEST_HOME?
+  path.join(process.env.CLAUDEBRIDGE_SETUP_TEST_HOME,'.claudebridge'):
+  path.join(os.homedir(),'.claudebridge');
+ const removed=[],skipped=[];
+ const registry=path.join(bridgeHome,'projects.json');
+ if(fs.existsSync(registry)){
+  let entries={};
+  try{entries=JSON.parse(fs.readFileSync(registry,'utf8')).projects||{};}
+  catch(e){throw Error('Cannot safely read project registry: '+e.message);}
+  for(const item of Object.values(entries)){
+   const project=String(item?.path||'');
+   if(!path.isAbsolute(project)){skipped.push('Invalid registered project path');continue;}
+   const location=path.join(project,'.agent-bridge');
+   if(!fs.existsSync(location))continue;
+   if(isLink(location)||isLink(path.join(location,'state.sqlite'))){
+    skipped.push(location);continue;
+   }
+   const required=['state.sqlite','.gitignore'];
+   if(!required.every(name=>fs.existsSync(path.join(location,name)))){
+    skipped.push(location);continue;
+   }
+   try{fs.rmSync(location,{recursive:true,force:true});removed.push(location);}
+   catch(e){skipped.push(location+' ('+e.message+')');}
+  }
+ }
+ if(fs.existsSync(bridgeHome)&&!isLink(bridgeHome)){
+  try{fs.rmSync(bridgeHome,{recursive:true,force:true});removed.push(bridgeHome);}
+  catch(e){skipped.push(bridgeHome+' ('+e.message+')');}
+ }
+ return {removed,skipped};
+}
 function uninstall(){
  if(!fs.existsSync(installPath)){
   // No owned install: leave all other Claude configuration untouched.
@@ -180,9 +212,16 @@ function uninstall(){
  let residual=null;
  try{fs.rmSync(installPath,{recursive:true,force:true,maxRetries:3,retryDelay:200});}
  catch(e){residual=installPath+' ('+e.message+')';}
- log(JSON.stringify({ok:!residual,mcpRemoved:changed,native:nativeResult,
-  residual,projectMemoryPreserved:true,
-  message:residual?'Close all ClaudeBridge processes and run uninstall again.':'ClaudeBridge MCP and native launcher removed; user plans and project source preserved.'}));
+ let dataPurge=null;
+ if(process.argv.includes('--purge-data'))dataPurge=purgePrivateMemory();
+ if(!fs.existsSync(installPath)&&fs.existsSync(stateRoot)&&!isLink(stateRoot)){
+  try{if(fs.readdirSync(stateRoot).length===0)fs.rmdirSync(stateRoot);}catch{}
+ }
+ log(JSON.stringify({ok:!residual&&(!dataPurge||dataPurge.skipped.length===0),mcpRemoved:changed,native:nativeResult,
+  residual,projectMemoryPreserved:!dataPurge,purge:dataPurge,
+  message:residual?'Close all ClaudeBridge processes and run uninstall again.':dataPurge?
+    'ClaudeBridge removed and registered project memory cleanup attempted. Source projects preserved.':
+    'ClaudeBridge MCP and native launcher removed; project memory preserved.'}));
  if(residual)process.exitCode=2;
 }
 function status(){
