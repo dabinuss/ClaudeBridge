@@ -51,6 +51,7 @@ jobs:
           node --check ui/client.js
           node --check integrations/native-ui/renderer.js
           node --check integrations/native-ui/companion.js
+          node --check integrations/native-ui/cdp.js
       - name: Run legacy smoke tests
         run: node tests/smoke.js
       - name: Run v2 smoke tests
@@ -81,6 +82,8 @@ jobs:
         run: node tests/ui.js
       - name: Test native model-picker enhancement
         run: node tests/native-picker.js
+      - name: Test native CDP pipe companion
+        run: node tests/native-cdp.js
       - name: Check bundled Codex CLI
         shell: bash
         run: node vendor/node_modules/@openai/codex/bin/codex.js --version
