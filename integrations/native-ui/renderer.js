@@ -103,12 +103,20 @@
    try{if(looksLikeModelMenu(el))attach(el);}catch{}
   });
  }
- let scheduled=false;
+ let scheduled=false,frameId=null;
  const observer=new MutationObserver(()=>{
   if(scheduled)return;scheduled=true;
-  requestAnimationFrame(()=>{scheduled=false;scan();});
+  frameId=requestAnimationFrame(()=>{
+   frameId=null;scheduled=false;
+   if(document.documentElement)scan();
+  });
  });
  observer.observe(document.documentElement,{subtree:true,childList:true});
  scan();
- window.addEventListener('beforeunload',()=>observer.disconnect(),{once:true});
+ const dispose=()=>{
+  observer.disconnect();
+  if(frameId!==null){cancelAnimationFrame(frameId);frameId=null;}
+ };
+ Object.defineProperty(window,'__claudebridgePickerDispose',{value:dispose,configurable:true});
+ window.addEventListener('beforeunload',dispose,{once:true});
 })();
