@@ -110,6 +110,8 @@ jobs:
         run: node tests/ripple-transport.js
       - name: Test Ripple-lite scoped bootstrap response transform
         run: node tests/ripple-transform.js
+      - name: Test managed Claude Desktop proxy configuration
+        run: node tests/ripple-config.js
       - name: Check bundled Codex CLI
         shell: bash
         run: node vendor/node_modules/@openai/codex/bin/codex.js --version
