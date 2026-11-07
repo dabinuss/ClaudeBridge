@@ -76,12 +76,6 @@ sha256(){
  if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'
  else sha256sum "$1" | awk '{print $1}'; fi
 }
-echo "Downloading verified ClaudeBridge application core..."
-download "$CORE_URL" "$CORE"
-HASH=$(sha256 "$CORE")
-if [ "$HASH" != "$CORE_SHA" ]; then echo "ClaudeBridge core checksum mismatch; installation stopped." >&2; exit 1; fi
-mkdir "$TMPROOT/core"
-tar -xzf "$CORE" -C "$TMPROOT/core"
 echo "Downloading Node.js $NODE_VERSION from nodejs.org..."
 download "$NODE_URL/$NODE_ARCHIVE" "$TMPROOT/$NODE_ARCHIVE"
 download "$NODE_URL/SHASUMS256.txt" "$TMPROOT/SHASUMS256.txt"
