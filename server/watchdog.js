@@ -36,6 +36,5 @@ function check(){
   }finally{db.close();}
 }
 const timer=setInterval(()=>{try{check();}catch(e){process.stderr.write('Watchdog: '+e.message+'\n');}},15000);
-timer.unref?.();
 try{check();}catch(e){process.stderr.write(e.message+'\n');}
 process.on('exit',()=>{try{if(fs.readFileSync(pidFile,'utf8').trim()===String(process.pid))fs.unlinkSync(pidFile);}catch{}});
