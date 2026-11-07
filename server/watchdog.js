@@ -15,6 +15,7 @@ function alive(pid){
   try{process.kill(pid,0);return true;}catch{return false;}
 }
 function check(){
+  if(!fs.existsSync(projectPath)||!fs.existsSync(path.join(projectPath,'.agent-bridge','state.sqlite')))process.exit(0);
   const db=openDb({path:projectPath});
   try{
     const active=listTasks(db,50).filter(t=>['queued','running'].includes(t.status));
