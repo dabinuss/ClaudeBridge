@@ -21,7 +21,7 @@ async function refresh(){
   $('loginBtn').textContent=health.codexLogin==='signed_in'?'Codex already integrated':'Connect ChatGPT';
   $('loginBtn').disabled=health.codexLogin==='signed_in'||!health.codexInstalled;
   const native=await call('bridge_native_picker',{action:'status'});
-  $('nativeStatus').textContent=!native.supported?'Windows only':native.installed?'Enabled via ClaudeBridge shortcut':'Not installed';
+  $('nativeStatus').textContent=!native.supported?'Not supported':native.installed?'Enabled via ClaudeBridge shortcut':'Not installed';
   $('nativeInstallBtn').disabled=!native.supported||native.installed;
   $('nativeRemoveBtn').disabled=!native.supported||!native.installed;
    }catch(e){show('Cannot refresh settings: '+e.message);}
