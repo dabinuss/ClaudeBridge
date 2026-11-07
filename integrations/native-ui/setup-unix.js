@@ -65,7 +65,7 @@ function detectClaude(){
 function install(extensionRoot){
  validatePlatform();
  if(!path.isAbsolute(extensionRoot)||!fs.existsSync(extensionRoot))throw Error('A valid absolute extension directory is required');
- if((fs.existsSync(base)&&!owner())||(fs.existsSync(platform==='darwin'?app:desktop)&&!ownLauncher()))
+ if((fs.existsSync(base)&&!owner())||(fs.existsSync(platform==='darwin'?app:desktop)&&!ownLauncher())||(platform==='linux'&&fs.existsSync(desktopIcon)&&!regular(desktopIcon)))
   throw Error('Existing installation path is not owned by ClaudeBridge; refusing overwrite');
  for(const p of [base,path.dirname(base)])if(!pathSafe(p))throw Error('Refusing symlinked installation directory');
  const source=path.join(extensionRoot,'integrations','native-ui');
@@ -119,7 +119,7 @@ function install(extensionRoot){
    'Comment=Claude Desktop with ClaudeBridge model menu','Exec="'+shell.replaceAll('"','\\"')+'"',
    'Terminal=false','Categories=Development;','X-ClaudeBridge-Owned='+tag].join('\n')+'\n';
   fs.writeFileSync(desktop,entry,{mode:0o600});fs.chmodSync(desktop,0o755);
-  if(fs.existsSync(path.dirname(desktopIcon))&&pathSafe(desktopIcon)){
+  if(fs.existsSync(path.dirname(desktopIcon))&&pathSafe(desktopIcon)&&(!fs.existsSync(desktopIcon)||(regular(desktopIcon)&&fs.readFileSync(desktopIcon,'utf8').includes('X-ClaudeBridge-Owned='+tag)))){
    fs.writeFileSync(desktopIcon,entry,{mode:0o600});fs.chmodSync(desktopIcon,0o755);
   }
  }
