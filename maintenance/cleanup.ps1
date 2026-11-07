@@ -9,7 +9,7 @@ param(
   [string]$ExtensionRoot = ""
 )
 $ErrorActionPreference = 'Stop'
-$homePath = Join-Path $HOME ".claudebridge"
+$homePath = if($env:CLAUDEBRIDGE_CLEANUP_TEST_HOME) { $env:CLAUDEBRIDGE_CLEANUP_TEST_HOME } else { Join-Path $HOME ".claudebridge" }
 $nativeScript = if($ExtensionRoot) {
   Join-Path $ExtensionRoot "integrations\native-ui\install.ps1"
 } else {
@@ -99,7 +99,7 @@ if($PurgeBridgeState -and (Test-Path -LiteralPath $homePath)) {
 }
 
 if($PurgeBridgeState -and !$PurgeProjectMemory) {
-  $report.notes += "Per-project .agent-bridge folders are preserved. They can be deleted later with -PurgeProjectMemory while the registry is available."
+  $report.notes += "Per-project .agent-bridge folders were preserved. The registry has been removed, so those folders must be located directly for any later manual cleanup."
 }
 if($AuditOnly) { $report.notes += "AuditOnly: nothing was removed." }
 $report | ConvertTo-Json -Depth 6
