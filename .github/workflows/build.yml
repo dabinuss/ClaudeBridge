@@ -71,7 +71,7 @@ jobs:
       - name: Bundle Codex CLI runtime
         run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0
       - name: Install build-only dependencies
-        run: npm install --prefix .builddeps --no-audit --no-fund --no-save @modelcontextprotocol/ext-apps@1.1.2 esbuild@0.25.12 @anthropic-ai/mcpb
+        run: npm install --prefix .builddeps --no-audit --no-fund --no-save @modelcontextprotocol/ext-apps@1.1.2 esbuild@0.25.12 @anthropic-ai/mcpb jsdom@26.1.0
       - name: Build bundled MCP Apps browser UI
         shell: bash
         run: |
@@ -79,6 +79,8 @@ jobs:
           npm exec --prefix .builddeps -- esbuild .builddeps/claudebridge-ui-entry.js --bundle --platform=browser --format=iife --minify --outfile=ui/control-panel.bundle.js
       - name: Test interactive MCP panel
         run: node tests/ui.js
+      - name: Test native model-picker enhancement
+        run: node tests/native-picker.js
       - name: Check bundled Codex CLI
         shell: bash
         run: node vendor/node_modules/@openai/codex/bin/codex.js --version
