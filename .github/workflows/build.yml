@@ -243,7 +243,7 @@ jobs:
         run: gh release delete-asset preview ClaudeBridge.mcpb -y 2>/dev/null || true
       - name: Generate SHA-256 checksums
         if: steps.current.outputs.publish == 'true'
-        run: sha256sum ClaudeBridge-*.mcpb ClaudeBridge-Setup-* ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-* > SHA256SUMS
+        run: sha256sum ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-* > SHA256SUMS
       - name: Publish preview installers
         if: steps.current.outputs.publish == 'true'
         env:
@@ -251,7 +251,13 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           if gh release view preview >/dev/null 2>&1; then
-            gh release upload preview ClaudeBridge-*.mcpb ClaudeBridge-Setup-* ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-* SHA256SUMS --clobber
+            gh release upload preview ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-* SHA256SUMS --clobber
           else
-            gh release create preview ClaudeBridge-*.mcpb ClaudeBridge-Setup-* ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-* SHA256SUMS --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Experimental cross-platform desktop extensions. Codex CLI is bundled. One-time ChatGPT sign-in remains required." --prerelease
+            gh release create preview ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-* SHA256SUMS --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Experimental cross-platform desktop extensions. Codex CLI is bundled. One-time ChatGPT sign-in remains required." --prerelease
           fi
+          # Offline packages stay available as CI artifacts, not duplicate preview downloads.
+          for obsolete in \
+            ClaudeBridge-Linux.mcpb ClaudeBridge-macOS.mcpb ClaudeBridge-Windows.mcpb \
+            ClaudeBridge-Setup-Linux.run ClaudeBridge-Setup-macOS.command ClaudeBridge-Setup-Windows.exe; do
+            gh release delete-asset preview "$obsolete" -y 2>/dev/null || true
+          done
