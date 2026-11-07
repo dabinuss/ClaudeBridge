@@ -44,6 +44,7 @@ function apply({proxyUrl,dir=configDir(),owner='claudebridge'}){
  const current=state(dir);
  const mark=current.meta[MARK];
  if(mark && mark.owner!==owner)throw Error('Another ClaudeBridge installation owns the proxy entry');
+ if(mark&&!current.ours)throw Error('Claude Desktop proxy was changed externally; refusing to overwrite it');
  if(current.ours && mark.owner===owner){
   writeAtomic(path.join(dir,current.id+'.json'),{...current.active,egressProxyUrl:proxyUrl});
   return {id:current.id,previous:mark.previous||null};
