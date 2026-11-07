@@ -6,7 +6,6 @@ const {execFileSync}=require('node:child_process');
 const {makePickerProxy}=require('../integrations/ripple-lite/proxy');
 async function eventually(pred){for(let i=0;i<100;i++){if(pred())return;await new Promise(r=>setTimeout(r,10));}throw Error('timed out');}
 (async()=>{
- try{execFileSync('openssl',['version'],{stdio:'ignore'});}catch{console.log('SKIP: openssl unavailable');return;}
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'cb-ripple-mitm-'));
  let proxy,server;
  try{
