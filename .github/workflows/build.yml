@@ -47,6 +47,8 @@ jobs:
           node --check server/settings.js
           node --check server/app-ui.js
           node --check integrations/picker.js
+          node --check server/process-tree.js
+          node --check ui/client.js
       - name: Run legacy smoke tests
         run: node tests/smoke.js
       - name: Run v2 smoke tests
@@ -63,7 +65,10 @@ jobs:
           node tests/settings.js
           node tests/picker.js
       - name: Bundle Codex CLI and MCP Apps UI runtime
-        run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 @modelcontextprotocol/ext-apps
+        run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 @modelcontextprotocol/ext-apps@1.1.2 esbuild@0.25.12
+      - name: Build bundled MCP Apps browser UI
+        shell: bash
+        run: node vendor/node_modules/esbuild/bin/esbuild ui/client.js --bundle --platform=browser --format=iife --minify --outfile=ui/control-panel.bundle.js --node-path=vendor/node_modules
       - name: Test interactive MCP panel
         run: node tests/ui.js
       - name: Check bundled Codex CLI
