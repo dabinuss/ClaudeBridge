@@ -16,6 +16,8 @@ const MAX_LOG_BYTES = 8 * 1024 * 1024;
 const MAX_NOTES_BYTES = 256 * 1024;
 const MAX_TASKS = 1000;
 const MAX_INPUT_BYTES = 1024 * 1024;
+const MAX_CONCURRENT = 3;
+const MAX_TASK_MS = 45 * 60 * 1000;
 const MAX_ACTIVITY_BYTES = 8 * 1024 * 1024;
 let codexCache = null;
 const now = () => new Date().toISOString();
@@ -88,6 +90,7 @@ function appendLimited(file, data) {
 function startTask(prompt, mode, previous=null, customId=null) {
   if(typeof prompt!=='string' || !prompt.trim() || prompt.length>30000)throw Error('Task must contain 1–30,000 characters');
   if(!['code','review'].includes(mode))throw Error('Mode must be code or review');
+  if(running.size>=MAX_CONCURRENT) throw Error('Too many concurrent Codex tasks (limit: '+MAX_CONCURRENT+'). Wait or cancel a task.');
   if([...running.values()].some(x=>x.mode==='code') || (mode==='code' && running.size)) throw Error('A Codex job is already running. Wait for completion or cancel it to avoid file conflicts.');
   const binary=cliLocation(); if(!binary) throw Error('Codex CLI not found. Install with npm install -g @openai/codex and run codex login.');
   const id=customId||crypto.randomUUID();
@@ -124,8 +127,15 @@ function startTask(prompt, mode, previous=null, customId=null) {
   child.stdin.on('error',()=>{});
   child.stdin.end(instructions);
   let finalized=false;
+  const timeout=setTimeout(()=>{
+    if(finalized)return;
+    update(id,{error:'Codex task exceeded the 45-minute safety timeout.'});
+    child.kill();
+    if(process.platform==='win32'&&child.pid)spawn('taskkill',['/pid',String(child.pid),'/t','/f'],{windowsHide:true});
+  },MAX_TASK_MS);
+  timeout.unref();
   function finalize(code,signal,error){
-    if(finalized)return;finalized=true;running.delete(id);
+    if(finalized)return;finalized=true;clearTimeout(timeout);running.delete(id);
     const current=getTask(id);
     const cancelled=current.status==='cancelled';
     const status=cancelled?'cancelled':((code===0&&successful&&!hadFailure)?'completed':'failed');
