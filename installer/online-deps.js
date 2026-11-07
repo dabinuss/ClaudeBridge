@@ -30,9 +30,11 @@ function prepare(){
  const vendor=path.join(root,'vendor');
  fs.mkdirSync(vendor,{recursive:true});
  run([npmCli,'install','--prefix',vendor,'--no-save','--no-audit','--no-fund','--ignore-scripts',
-    '--registry=https://registry.npmjs.org','@openai/codex@'+version]);
+    '--registry=https://registry.npmjs.org','@openai/codex@'+version,'node-forge@1.4.3']);
  const codex=path.join(vendor,'node_modules','@openai','codex','bin','codex.js');
  if(!fs.existsSync(codex))throw Error('Codex package installation is incomplete');
+ if(!fs.existsSync(path.join(vendor,'node_modules','node-forge','package.json')))
+  throw Error('Certificate support package installation is incomplete');
  // npm integrity and HTTPS are checked by npm; verify the unpacked CLI is the expected version.
  const verify=spawnSync(process.execPath,[codex,'--version'],{encoding:'utf8',timeout:10000,windowsHide:true});
  if(verify.status!==0||!String(verify.stdout).includes(version))
