@@ -11,6 +11,7 @@ const memory=require('./memory');
 const plans=require('./plans');
 const settings=require('./settings');
 const appUI=require('./app-ui');
+const {terminateTree}=require('./process-tree');
 const {registerProject,chooseProject,currentProject,registeredProjects,openDb,addTask,patchTask,task,listTasks,message,messages}=store;
 const bundled=path.resolve(__dirname,'..','vendor','node_modules','@openai','codex','bin','codex.js');
 function codexBinary(){
@@ -174,7 +175,9 @@ function stopTask(args){
     const t=task(db,args.task_id);if(!t)throw Error('Unknown task');
     if(!['queued','running'].includes(t.status))return taskSummary(t);
     patchTask(db,t.id,{status:'cancelled'});
+    if(t.child_pid)terminateTree(t.child_pid);
     if(t.pid){try{process.kill(t.pid,'SIGTERM');}catch{}}
+    message(db,'system','claude','Cancelled Codex task '+t.id,t.id);
     return {id:t.id,status:'cancelled'};
   }finally{db.close();}
 }
