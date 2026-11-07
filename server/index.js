@@ -13,9 +13,13 @@ const notesFile = path.join(meta, 'handoff.md');
 const activityFile = path.join(meta, 'activity.jsonl');
 const running = new Map();
 const MAX_LOG_BYTES = 8 * 1024 * 1024;
+const MAX_NOTES_BYTES = 256 * 1024;
+const MAX_TASKS = 1000;
+const MAX_INPUT_BYTES = 1024 * 1024;
+let codexCache = null;
 const now = () => new Date().toISOString();
 function safeWrite(file, data) {
-  const tmp = file + '.' + process.pid + '.tmp';
+  const tmp = file + '.' + process.pid + '.' + crypto.randomUUID() + '.tmp';
   fs.writeFileSync(tmp, data, 'utf8');
   fs.renameSync(tmp, file);
 }
@@ -31,8 +35,20 @@ function setup() {
   }
   if (changed) save(all);
 }
-function load() { try { return JSON.parse(fs.readFileSync(tasksFile,'utf8')); } catch {return {};}}
-function save(value) {safeWrite(tasksFile, JSON.stringify(value,null,2)+'\n');}
+function load() {
+  const value = JSON.parse(fs.readFileSync(tasksFile,'utf8'));
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('Invalid task database');
+  return value;
+}
+function save(value) {
+  const entries=Object.values(value);
+  if(entries.length>MAX_TASKS) {
+    const removable=entries.filter(t=>!['queued','running'].includes(t.status))
+      .sort((a,b)=>String(a.updated).localeCompare(String(b.updated)));
+    for(const task of removable.slice(0,entries.length-MAX_TASKS)) delete value[task.id];
+  }
+  safeWrite(tasksFile,JSON.stringify(value,null,2)+'\n');
+}
 function event(kind, taskId, detail) {
   fs.appendFileSync(activityFile, JSON.stringify({at:now(), kind, taskId, detail:String(detail||'').slice(0,1000)})+'\n');
 }
@@ -40,22 +56,32 @@ function update(id, patch) {const all=load(); if(!all[id])return; Object.assign(
 function checkTaskId(id) {if(!/^[0-9a-f-]{36}$/i.test(String(id||'')))throw Error('Invalid task ID');}
 function getTask(id) {checkTaskId(id); const t=load()[id];if(!t)throw Error('Task not found');return t;}
 function cliLocation(){
-  if(process.env.CODEX_BIN) return process.env.CODEX_BIN;
-  const which = process.platform==='win32'?'where.exe':'which';
+  if(process.env.CODEX_BIN) return path.resolve(process.env.CODEX_BIN);
+  if(codexCache && fs.existsSync(codexCache)) return codexCache;
+  const which=process.platform==='win32'?'where.exe':'which';
   const found=spawnSync(which,['codex'],{encoding:'utf8',windowsHide:true,timeout:4000});
-  return found.status===0 ? found.stdout.split(/\r?\n/).find(Boolean)?.trim() : null;
+  const candidates=found.status===0?found.stdout.split(/\r?\n/).map(x=>x.trim()).filter(Boolean):[];
+  const binary=candidates.find(x=>/\.(cmd|exe|js)$/i.test(x))||candidates[0]||null;
+  if(binary) codexCache=binary;
+  return binary;
 }
-function launchExecutable(binary, args) {
-  if (/\.js$/i.test(binary)) return spawn(process.execPath,[binary,...args],{cwd:root,windowsHide:true,stdio:['pipe','pipe','pipe']});
-  if(process.platform==='win32' && /\.(cmd|bat)$/i.test(binary)) {
-    // no user-provided text in the shell command; the prompt is always passed via stdin
-    const quoted='"'+binary.replace(/"/g,'')+'"';
-    return spawn(process.env.ComSpec||'cmd.exe', ['/d','/s','/c',quoted+' '+args.join(' ')], {cwd:root,windowsHide:true,stdio:['pipe','pipe','pipe']});
+function launchExecutable(binary,args){
+  let command=binary, commandArgs=args;
+  if(process.platform==='win32' && /\.cmd$/i.test(binary)){
+    // Never concatenate CLI arguments into a cmd.exe command: avoid shell injection.
+    const entry=path.join(path.dirname(binary),'node_modules','@openai','codex','bin','codex.js');
+    if(!fs.existsSync(entry)) throw Error('Codex Windows launcher found, but its Node entrypoint is missing: '+entry);
+    command=process.execPath;commandArgs=[entry,...args];
+  } else if(/\.js$/i.test(binary)){
+    command=process.execPath;commandArgs=[binary,...args];
+  } else if(/\.bat$/i.test(binary)){
+    throw Error('Unsupported .bat launcher. Configure CODEX_BIN to use codex.cmd or codex.js.');
   }
-  return spawn(binary,args,{cwd:root,windowsHide:true,stdio:['pipe','pipe','pipe']});
+  return spawn(command,commandArgs,{cwd:root,windowsHide:true,stdio:['pipe','pipe','pipe'],shell:false});
 }
 function appendLimited(file, data) {
-  if (!fs.existsSync(file) || fs.statSync(file).size<MAX_LOG_BYTES) fs.appendFileSync(file,data);
+  const used=fs.existsSync(file)?fs.statSync(file).size:0;
+  if(used<MAX_LOG_BYTES) fs.appendFileSync(file,String(data).slice(0,MAX_LOG_BYTES-used));
 }
 function startTask(prompt, mode, previous=null, customId=null) {
   if(typeof prompt!=='string' || !prompt.trim() || prompt.length>30000)throw Error('Task must contain 1–30,000 characters');
@@ -64,7 +90,7 @@ function startTask(prompt, mode, previous=null, customId=null) {
   const binary=cliLocation(); if(!binary) throw Error('Codex CLI not found. Install with npm install -g @openai/codex and run codex login.');
   const id=customId||crypto.randomUUID();
   const prev=previous?getTask(previous):null;
-  if(prev && !prev.sessionId)throw Error('Previous task has no Codex session ID. Start a new task instead.');
+  if(prev && !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(String(prev.sessionId||'')))throw Error('Previous task has no Codex session ID. Start a new task instead.');
   const task={id,mode,prompt,previous:previous||null,created:now(),updated:now(),status:'queued',sessionId:prev?.sessionId||null,lastMessage:'',error:null,usage:null,completed:false};
   const all=load();all[id]=task;save(all); event('task.queued',id,prompt.slice(0,220));
   const args=previous?['exec','resume',prev.sessionId,'--json','-']:['exec','--json','--sandbox',mode==='review'?'read-only':'workspace-write','-'];
@@ -84,7 +110,7 @@ function startTask(prompt, mode, previous=null, customId=null) {
   const rl=readline.createInterface({input:child.stdout});
   let successful=false,hadFailure=false,stderr='';
   rl.on('line',line=>{
-    appendLimited(logFile,line+'\n');let e;try{e=JSON.parse(line);}catch{return;}
+    appendLimited(logFile,line.slice(0,256*1024)+'\n');let e;try{e=JSON.parse(line);}catch{return;}
     if(e.type==='thread.started' && e.thread_id) update(id,{sessionId:e.thread_id});
     if(e.type==='item.completed' && e.item?.type==='agent_message') update(id,{lastMessage:String(e.item.text||'').slice(-12000)});
     if(e.type==='item.started' && e.item?.type==='command_execution') update(id,{activity:String(e.item.command||'').slice(0,400)});
@@ -127,7 +153,9 @@ function call(name,args={}){
     case 'bridge_status':return status(args.task_id,Boolean(args.include_events));
     case 'bridge_cancel': {const t=getTask(args.task_id);const entry=running.get(t.id);if(!entry)return {id:t.id,status:t.status,message:'Task is not running in this bridge process.'};update(t.id,{status:'cancelled',error:'Cancelled by user/Claude'});entry.child.kill();if(process.platform==='win32'&&entry.child.pid){spawn('taskkill',['/pid',String(entry.child.pid),'/t','/f'],{windowsHide:true});}return {id:t.id,status:'cancelled'};}
     case 'bridge_resume':{const old=getTask(args.task_id);if(['running','queued'].includes(old.status))throw Error('Task is already running.');return startTask(args.task,old.mode,old.id);}
-    case 'bridge_checkpoint': {if(typeof args.note!=='string'||!args.note.trim()||args.note.length>20000)throw Error('Note must contain 1–20,000 characters'); fs.appendFileSync(notesFile,'\n## '+now()+' · Claude\n\n'+args.note.trim()+'\n');event('checkpoint',null,args.note.slice(0,180));return {saved:true,file:notesFile};}
+    case 'bridge_checkpoint': {if(typeof args.note!=='string'||!args.note.trim()||args.note.length>20000)throw Error('Note must contain 1–20,000 characters'); const content='\n## '+now()+' · Claude\n\n'+args.note.trim()+'\n';
+      if(fs.statSync(notesFile).size+Buffer.byteLength(content)>MAX_NOTES_BYTES) throw Error('Project handoff is full. Archive or shorten handoff.md before continuing.');
+      fs.appendFileSync(notesFile,content);event('checkpoint',null,args.note.slice(0,180));return {saved:true,file:notesFile};}
     case 'bridge_context':return {project:root,notes:fs.readFileSync(notesFile,'utf8').slice(-25000),recentJobs:status().jobs};
     default:throw Error('Unknown tool: '+name);
   }
@@ -151,4 +179,7 @@ async function handle(req){
 }
 try{setup();}catch(e){process.stderr.write('Bridge startup error: '+e.message+'\n');process.exit(1);}
 const input=readline.createInterface({input:process.stdin,crlfDelay:Infinity});
-input.on('line',line=>{try{handle(JSON.parse(line));}catch(e){process.stderr.write(e.message+'\n');}});
+input.on('line',line=>{
+  if(Buffer.byteLength(line)>MAX_INPUT_BYTES){process.stderr.write('MCP input too large\n');return;}
+  try{handle(JSON.parse(line));}catch(e){process.stderr.write(e.message+'\n');}
+});
