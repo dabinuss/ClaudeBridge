@@ -63,7 +63,7 @@ function ensureWatchdog(p){
     if(pid>0){try{process.kill(pid,0);return;}catch{}}
   }
   const child=spawn(process.execPath,[path.join(__dirname,'watchdog.js'),p.path],{
-    cwd:p.path,detached:true,windowsHide:true,stdio:'ignore',shell:false
+    cwd:os.tmpdir(),detached:true,windowsHide:true,stdio:'ignore',shell:false
   });
   child.on('error',()=>{});
   child.unref();
