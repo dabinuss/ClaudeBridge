@@ -17,6 +17,28 @@ try{
  // Keep only source + compiled MCP Apps UI; never package Codex or Node in the tiny core.
  const included=['manifest.json','server','ui','integrations','installer','maintenance'];
  for(const p of included)if(!fs.existsSync(path.join(work,p)))throw Error('Missing compiled core component '+p);
+ const required=[
+  'server/v2.js','server/db.js','server/worker.js','server/watchdog.js',
+  'server/agent-mcp.js','server/memory.js','server/memory-monitor.js',
+  'server/plans.js','server/settings.js','server/process-tree.js','server/app-ui.js',
+  'ui/control-panel.html','ui/control-panel.bundle.js',
+  'integrations/native-ui/companion.js','integrations/native-ui/cdp.js',
+  'integrations/native-ui/renderer.js','integrations/native-ui/setup-unix.js',
+  'integrations/native-ui/install.ps1','integrations/native-ui/launcher.vbs',
+  'installer/setup.js','installer/online-deps.js'
+ ];
+ for(const relative of required){
+  const file=path.join(work,relative);
+  if(!fs.existsSync(file)||!fs.statSync(file).isFile()||fs.statSync(file).size===0)
+   throw Error('Compiled ClaudeBridge application core is incomplete: '+relative);
+ }
+ // Check executable MCP entry points and the real bundled in-chat settings UI,
+ // not just the existence of their parent directories.
+ const appUI=fs.readFileSync(path.join(work,'ui/control-panel.bundle.js'),'utf8');
+ if(!appUI.includes('ClaudeBridge'))throw Error('Compiled MCP settings UI missing');
+ const server=fs.readFileSync(path.join(work,'server/v2.js'),'utf8');
+ if(!server.includes('bridge_native_picker')||!server.includes('bridge_delegate'))
+  throw Error('Required MCP tools missing from the application core');
  const core=path.join(root,'ClaudeBridge-Online-Core.tar.gz');
  const t=spawnSync('tar',['-czf',core,...included],{cwd:work,encoding:'utf8',timeout:45000});
  if(t.status!==0)throw Error('Core packaging failed: '+t.stderr);
