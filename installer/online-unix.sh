@@ -7,6 +7,7 @@ PURGE=0
 case "${1:-}" in
   --uninstall|uninstall) MODE=uninstall ;;
   --status|status) MODE=status ;;
+  --verify-core) MODE=verify-core ;;
   ""|--install|install) MODE=install ;;
   *) echo "Usage: $0 [--install|--uninstall|--status] [--purge-data]" >&2; exit 2 ;;
 esac
@@ -50,12 +51,23 @@ trap 'rm -rf "$TMPROOT"' EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 CORE="$TMPROOT/core.tar.gz"
-CORE_SHA="__CORE_SHA256__"
-CORE_URL="https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Online-Core.tar.gz"
+# The complete compiled ClaudeBridge application is embedded after this script.
+# No GitHub request is needed to retrieve any ClaudeBridge-owned files.
+PAYLOAD_LINE=__PAYLOAD_LINE__
+tail -n +"$PAYLOAD_LINE" "$0" > "$CORE"
+mkdir "$TMPROOT/core"
+if ! tar -xzf "$CORE" -C "$TMPROOT/core"; then
+  echo "The embedded ClaudeBridge application is damaged." >&2
+  exit 1
+fi
+if [ "$MODE" = "verify-core" ]; then
+  echo "Embedded ClaudeBridge application extracted successfully."
+  exit 0
+fi
 NODE_VERSION="22.23.4"
 NODE_ARCHIVE="node-v$NODE_VERSION-$PLATFORM-$ARCH.tar.gz"
 NODE_URL="https://nodejs.org/dist/v$NODE_VERSION"
-if ! command -v curl >/dev/null 2>&1; then
+if [ "$MODE" != "verify-core" ] && ! command -v curl >/dev/null 2>&1; then
   echo "curl is required to download verified dependencies." >&2
   exit 1
 fi
