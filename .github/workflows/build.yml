@@ -104,6 +104,8 @@ jobs:
         run: node tests/native-picker.js
       - name: Test native CDP pipe companion
         run: node tests/native-cdp.js
+      - name: Test Ripple-lite bootstrap adapter
+        run: node tests/ripple-lite.js
       - name: Check bundled Codex CLI
         shell: bash
         run: node vendor/node_modules/@openai/codex/bin/codex.js --version
