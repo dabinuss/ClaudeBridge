@@ -75,6 +75,18 @@ jobs:
           node tests/picker.js
       - name: Test Codex cancellation and child cleanup
         run: node tests/cancel.js
+      - name: Test lightweight bootstrap entry points without downloading
+        shell: bash
+        env:
+          CLAUDEBRIDGE_SETUP_TEST_HOME: ${{ runner.temp }}/claudebridge-light-bootstrap-test
+        run: |
+          if [ "${{ matrix.platform }}" = "win32" ]; then
+            cmd.exe /c "installer\\online-windows.cmd --status"
+            cmd.exe /c "installer\\online-windows.cmd --uninstall"
+          else
+            sh installer/online-unix.sh --status
+            sh installer/online-unix.sh --uninstall
+          fi
       - name: Test one-file installer config registration
         run: node tests/standalone-setup.js
       - name: Bundle Codex CLI runtime
