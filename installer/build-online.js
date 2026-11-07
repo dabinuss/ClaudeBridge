@@ -16,6 +16,13 @@ try{
   fs.rmSync(path.join(work,relative),{force:true,recursive:true});
  }
  // Keep only source + compiled MCP Apps UI; never package Codex or Node in the tiny core.
+ // A single script-only core is shared across platforms; do not retain the
+ // Linux-only MCPB compatibility flag from the archive used to build it.
+ const manifestFile=path.join(work,'manifest.json');
+ const manifest=JSON.parse(fs.readFileSync(manifestFile,'utf8'));
+ manifest.compatibility=manifest.compatibility||{};
+ manifest.compatibility.platforms=['win32','darwin','linux'];
+ fs.writeFileSync(manifestFile,JSON.stringify(manifest,null,2)+'\n');
  const included=['manifest.json','server','ui','integrations','installer','maintenance'];
  for(const p of included)if(!fs.existsSync(path.join(work,p)))throw Error('Missing compiled core component '+p);
  const required=[
