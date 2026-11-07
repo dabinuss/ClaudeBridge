@@ -2,9 +2,32 @@
 
 **Use Claude Desktop and Codex CLI together through ordinary Claude conversations. No slash commands required.**
 
-![Version](https://img.shields.io/badge/version-2.1.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
+![Version](https://img.shields.io/badge/version-2.2.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
 
 > Preview: ClaudeBridge runs as an MCP Desktop Extension. It cannot change the proprietary Claude chat UI, read hidden Claude conversation context, or bypass subscription limits.
+
+## ClaudeBridge control panel inside Claude
+
+ClaudeBridge 2.2 adds an interactive **MCP Apps** control panel without replacing the MCP bridge. In your Claude conversation, ask:
+
+> **Open ClaudeBridge settings.**
+
+When your Claude Desktop build supports local MCP Apps rendering, the panel appears directly inside your existing Claude conversation, with:
+
+- **Off:** Block new Codex tasks while keeping project history.
+- **On demand:** Claude delegates tasks when asked.
+- **Fallback:** A Codex handoff requires an explicitly confirmed Claude limit or a manual user request. Claude Desktop does **not** expose a reliable automatic quota event.
+- **Dual agents:** Claude and Codex may work on separate tasks concurrently, with durable handoffs, messages and Git worktrees.
+- **Working memory:** Toggle token-free project activity monitoring.
+- **Codex status:** Detect the bundled CLI and ChatGPT sign-in state; connect your account or open the installer download for repair.
+
+The same settings are available to Claude as MCP tools through normal-language requests. No slash commands are needed.
+
+### Experimental native model-picker integration
+
+The repository includes `integrations/picker.js`, a tested, **opt-in bootstrap adapter** that adds a ClaudeBridge row only to Claude **Code/Cowork** model surfaces. It is **not currently wired to Claude Desktop's network bootstrap or model-response routing**, so installing the MCPB does not yet add the row to the model-picker dropdown from your screenshot. Do not treat that row as an operational model until routing is implemented and tested.
+
+See [Native picker integration notes](docs/NATIVE-PICKER.md). The model picker and MCP Apps panel are different surfaces. The MCP tools continue working independently of any experimental picker integration.
 
 ## Easy installation
 
