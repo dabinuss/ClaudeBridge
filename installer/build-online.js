@@ -41,8 +41,12 @@ try{
  if(!server.includes('bridge_native_picker')||!server.includes('bridge_delegate'))
   throw Error('Required MCP tools missing from the application core');
  const core=path.join(root,'ClaudeBridge-Online-Core.tar.gz');
- const t=spawnSync('tar',['-czf',core,...included],{cwd:work,encoding:'utf8',timeout:45000});
+ // Use a relative archive output so GNU tar on Windows does not interpret
+ // the drive letter (D:) as a remote hostname.
+ const localArchive='claudebridge-core.tar.gz';
+ const t=spawnSync('tar',['-czf',localArchive,...included],{cwd:work,encoding:'utf8',timeout:45000});
  if(t.status!==0)throw Error('Core packaging failed: '+t.stderr);
+ fs.copyFileSync(path.join(work,localArchive),core);
  const archive=fs.readFileSync(core);
  const digest=crypto.createHash('sha256').update(archive).digest('hex');
  const unixTemplate=fs.readFileSync(path.join(root,'installer','online-unix.sh'),'utf8');
