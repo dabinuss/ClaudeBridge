@@ -120,6 +120,22 @@ function stopTask(args){
     return {id:t.id,status:'cancelled'};
   }finally{db.close();}
 }
+function worktrees(){
+  const [p,db]=projectDb();db.close();
+  const result=spawnSync('git',['worktree','list','--porcelain'],{cwd:p.path,encoding:'utf8',timeout:5000,windowsHide:true,maxBuffer:128*1024});
+  if(result.status!==0)throw Error('Git worktrees are unavailable: '+String(result.stderr||'not a Git repository').slice(0,500));
+  const records=String(result.stdout).trim().split(/\n\s*\n/).filter(Boolean).map(text=>{
+    const info={};
+    for(const line of text.split(/\r?\n/)){
+      const [key,...rest]=line.split(' ');
+      if(['worktree','HEAD','branch'].includes(key))info[key]=rest.join(' ');
+      if(key==='detached')info.detached=true;
+    }
+    return info;
+  });
+  return {project:p.name,worktrees:records,
+    guidance:'Worktree changes are not merged automatically. Ask Claude to inspect diffs and integrate changes after review.'};
+}
 function codexLogin(){
   const bin=codexBinary();
   if(!bin)throw Error('Codex CLI is missing. Install a bundled platform package.');
@@ -159,6 +175,7 @@ const specs=[
  {name:'bridge_checkpoint',description:'Write a durable handoff/decision that will appear in Codex tasks.',inputSchema:props({note:{type:'string'}},['note'])},
  {name:'bridge_cancel',description:'Stop an active Codex task.',inputSchema:props({task_id:{type:'string'}},['task_id'])},
  {name:'bridge_resume',description:'Resume a previous Codex session with a new task.',inputSchema:props({task_id:{type:'string'},task:{type:'string'}},['task_id','task'])},
+ {name:'bridge_worktrees',description:'List current Git worktrees so Claude can inspect independent Codex changes before merging them.',inputSchema:props({})},
  {name:'bridge_login',description:'Guide the user through one-time Codex ChatGPT authentication. Requires user action.',inputSchema:props({})}
 ];
 function call(name,args={}){
@@ -177,6 +194,7 @@ function call(name,args={}){
     case 'bridge_checkpoint':return sendMessage({to:'all',message:args.note});
     case 'bridge_cancel':return stopTask(args);
     case 'bridge_resume':return delegate({task:args.task,previous:args.task_id,mode:(()=>{const [,db]=projectDb();try{return task(db,args.task_id)?.mode||'review';}finally{db.close();}})(),worktree:false});
+    case 'bridge_worktrees':return worktrees();
     case 'bridge_login':return codexLogin();
     default:throw Error('Unknown tool: '+name);
   }
