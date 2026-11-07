@@ -109,12 +109,20 @@ function delegate(args){
     }
     const id=crypto.randomUUID();
     const previous=args.previous||null;
-    const planId=args.plan_id||null;
+    let planId=args.plan_id||null;
     if(planId&&plans.get(db,planId).status!=='active')throw Error('An approved plan is required for plan-bound execution.');
     if(previous){
       const old=task(db,previous);
       if(!old||!old.session_id)throw Error('Previous task has no resumable Codex session.');
       if(['queued','running'].includes(live(old,db).status))throw Error('Previous task is still active');
+      if(old.worktree&&mode==='code'&&!useWorktree)throw Error('Cannot resume an isolated Codex task in the main checkout. Continue in an isolated worktree.');
+      const saved=plans.forTask(db,old.id);
+      if(saved){
+        if(saved.currentVersion!==saved.plan_version||saved.currentStatus!=='active')
+          throw Error('The approved plan changed. Review and approve the new plan before resuming this task.');
+        if(planId&&planId!==saved.plan_id)throw Error('Cannot silently replace the original approved plan during a resume.');
+        planId=saved.plan_id;
+      }
     }
     addTask(db,{id,mode,prompt,project_path:p.path,worktree:useWorktree,previous});
     if(planId)plans.bind(db,id,planId);
@@ -275,7 +283,13 @@ function call(name,args={}){
     case 'bridge_message':return sendMessage(args);
     case 'bridge_checkpoint':return sendMessage({to:'all',message:args.note});
     case 'bridge_cancel':return stopTask(args);
-    case 'bridge_resume':return delegate({task:args.task,previous:args.task_id,mode:(()=>{const [,db]=projectDb();try{return task(db,args.task_id)?.mode||'review';}finally{db.close();}})(),worktree:false});
+    case 'bridge_resume':{
+      const [,db]=projectDb();
+      let old;
+      try{old=task(db,args.task_id);}finally{db.close();}
+      if(!old)throw Error('Unknown task to resume.');
+      return delegate({task:args.task,previous:args.task_id,mode:old.mode,worktree:Boolean(old.worktree),trigger:'manual'});
+    }
     case 'bridge_worktrees':return worktrees();
     case 'bridge_login':return codexLogin();
     default:throw Error('Unknown tool: '+name);
