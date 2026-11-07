@@ -12,7 +12,7 @@ const {transformBootstrap,MAX_BODY}=require('./transform');
 const {parseAuthority}=require('./transport');
 const {createIdentity}=require('./certs');
 const {ROUTE_ID,runCodex,writeAnswer}=require('./codex-model');
-function makePickerProxy({dir,host='127.0.0.1',port=0,models=[],upstream='claude.ai',dial=net.connect,request=https.request}={}){
+function makePickerProxy({dir,host='127.0.0.1',port=0,models=[],upstream='claude.ai',dial=net.connect,request=https.request,route=runCodex}={}){
  if(!['127.0.0.1','::1'].includes(host))throw Error('Loopback binding required');
  if(upstream!=='claude.ai')throw Error('Only Claude bootstrap interception is supported');
  if(!Array.isArray(models))throw Error('Models must be an array');
@@ -64,7 +64,7 @@ function makePickerProxy({dir,host='127.0.0.1',port=0,models=[],upstream='claude
    if(payload?.model!==ROUTE_ID){forward(body);return;}
    counters.routed++;
    try{
-    const text=await runCodex(payload);
+    const text=await route(payload);
     writeAnswer(res,text,{stream:payload.stream===true});
    }catch(error){
     counters.errors++;
