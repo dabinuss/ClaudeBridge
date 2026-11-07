@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {buildScript,dispatch}=require('../integrations/ripple-lite/chat-rpc');
+const fs=require('node:fs'),path=require('node:path');
+const renderer=fs.readFileSync(path.join(__dirname,'..','integrations','native-ui','renderer.js'),'utf8');
+const js=buildScript(renderer,'f'.repeat(64));
+assert.match(js,/__claudebridgeHost/);
+assert.match(js,/\/__claudebridge\/rpc/);
+assert.match(js,/__claudebridgePickerInjected/);
+assert.throws(()=>buildScript(renderer,'x'),/token/);
+assert.throws(()=>dispatch({id:1,action:'execute',command:'rm -rf /'}),/Unknown/);
+assert.throws(()=>dispatch({id:1,action:'set-mode',mode:'invalid'}),/Invalid/);
+assert.throws(()=>dispatch({id:0,action:'status'}),/Invalid/);
+console.log('PASS: Claude Chat UI script, bounded RPC and mode-validation guards');
