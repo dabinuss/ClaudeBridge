@@ -81,7 +81,13 @@ try{
     'Task:',t.prompt
   ].join('\n');
   const child=spawn(exe,[...base,...args],{cwd:projectPath,windowsHide:true,stdio:['pipe','pipe','pipe'],shell:false,detached:process.platform!=='win32'});
-  patchTask(db,id,{status:'running',pid:process.pid,child_pid:child.pid||null,heart_beat:now()});
+  const claimed=db.prepare("UPDATE tasks SET status='running',pid=?,child_pid=?,heart_beat=?,updated=? WHERE id=? AND status='queued'")
+    .run(process.pid,child.pid||null,now(),now(),id);
+  if(claimed.changes!==1){
+    terminateTree(child.pid);
+    db.close();
+    process.exit(0);
+  }
   message(db,'system','claude','Codex started task '+id,id);
   heartbeat=setInterval(()=>{
     try {
