@@ -23,7 +23,7 @@ async function main(){
   try{fs.rmSync(state,{force:true});}catch{}
   picker.close().finally(()=>process.exit(0));
  };
- picker=makePickerProxy({dir:path.join(dir,'certs'),port:PORT,models:models(),
+ picker=makePickerProxy({dir:path.join(dir,'certs'),port:PORT,models,
   controlToken:token,onShutdown:stop});
  const address=await picker.listen();
  fs.writeFileSync(state,JSON.stringify({pid:process.pid,port:address.port,
