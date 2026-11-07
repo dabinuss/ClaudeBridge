@@ -16,8 +16,8 @@ const ownFile=path.join(base,'owner.json');
 const app=path.join(root,'Applications','ClaudeBridge Claude.app');
 const desktop=path.join(root,'.local/share/applications/claudebridge-claude.desktop');
 const desktopIcon=path.join(root,'Desktop','claudebridge-claude.desktop');
-const files=['companion.js','cdp.js','renderer.js','settings.js','node'];
 const mk=(p)=>fs.mkdirSync(p,{recursive:true,mode:0o700});
+const shellQuote=(value)=>"'"+String(value).replaceAll("'","'\\''")+"'";
 function regular(p){try{const st=fs.lstatSync(p);return st.isFile()&&!st.isSymbolicLink();}catch(e){if(e.code==='ENOENT')return false;throw e;}}
 function pathSafe(p){try{const st=fs.lstatSync(p);return !st.isSymbolicLink();}catch(e){if(e.code==='ENOENT')return true;throw e;}}
 function validatePlatform(){if(!['darwin','linux'].includes(platform))throw Error('Unix native picker supports macOS and Linux only');}
@@ -96,7 +96,7 @@ function install(extensionRoot){
   if(fs.existsSync(app)&&!ownLauncher())throw Error('Refusing to replace an unrelated macOS application');
   mk(execDir);mk(resources);
   const executable=path.join(execDir,'ClaudeBridge');
-  fs.writeFileSync(executable,'#!/bin/sh\nexec "'+path.join(base,'node').replaceAll('"','\\"')+'" "'+path.join(base,'companion.js').replaceAll('"','\\"')+'"\n',{mode:0o700});
+  fs.writeFileSync(executable,'#!/bin/sh\nexec '+shellQuote(path.join(base,'node'))+' '+shellQuote(path.join(base,'companion.js'))+'\n',{mode:0o700});
   fs.chmodSync(executable,0o700);
   fs.writeFileSync(path.join(resources,'claudebridge-owned.txt'),tag+'\n',{mode:0o600});
   fs.writeFileSync(path.join(contents,'Info.plist'),[
@@ -108,12 +108,14 @@ function install(extensionRoot){
    '<key>CFBundleDisplayName</key><string>ClaudeBridge Claude</string>',
    '<key>CFBundleExecutable</key><string>ClaudeBridge</string>',
    '<key>CFBundlePackageType</key><string>APPL</string>',
+   '<key>CFBundleVersion</key><string>1</string>',
+   '<key>CFBundleShortVersionString</key><string>2.4.0</string>',
    '</dict></plist>'
   ].join('\n')+'\n',{mode:0o600});
  }else{
   mk(path.dirname(desktop));
   const shell=path.join(base,'launch.sh');
-  const script='#!/bin/sh\nexec "'+path.join(base,'node').replaceAll('"','\\"')+'" "'+path.join(base,'companion.js').replaceAll('"','\\"')+'"\n';
+  const script='#!/bin/sh\nexec '+shellQuote(path.join(base,'node'))+' '+shellQuote(path.join(base,'companion.js'))+'\n';
   fs.writeFileSync(shell,script,{mode:0o700});fs.chmodSync(shell,0o700);
   const entry=['[Desktop Entry]','Version=1.0','Type=Application','Name=ClaudeBridge Claude',
    'Comment=Claude Desktop with ClaudeBridge model menu','Exec="'+shell.replaceAll('"','\\"')+'"',
