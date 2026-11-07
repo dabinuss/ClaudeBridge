@@ -305,7 +305,7 @@ async function handle(req){
   if(!req||req.jsonrpc!=='2.0'||!req.method||req.id===undefined)return;
   try{
     let result;
-    if(req.method==='initialize')result={protocolVersion:req.params?.protocolVersion||'2025-06-18',serverInfo:{name:'claudebridge',version:'2.2.0'},capabilities:{tools:{},resources:{}},
+    if(req.method==='initialize')result={protocolVersion:req.params?.protocolVersion||'2025-06-18',serverInfo:{name:'claudebridge',version:'2.2.1'},capabilities:{tools:{},resources:{}},
       instructions:'Use ClaudeBridge naturally. First read bridge_settings and bridge_health for coding requests. If mode=off do not delegate. If mode=manual delegate when asked. If mode=dual, use bridge_context and bridge_memory, split substantial coding tasks into independent work and delegate one to Codex while Claude works on separate files; avoid simultaneous edits to the same file. If mode=fallback do not start Codex unless the user requests handoff or an actual external quota event is confirmed; the bridge cannot detect Claude quota through MCP alone. When user wants UI controls, open bridge_control_panel. Save explicit instructions and proposed plans with bridge_plan and bind approved plan IDs when delegating. Consult the mailbox, inspect all Codex worktrees before merging, and report status plainly. Never claim to read hidden Claude threads, automatically detect quota, or replace the native model picker.'};
     else if(req.method==='ping')result={};
     else if(req.method==='tools/list')result={tools:specs};
