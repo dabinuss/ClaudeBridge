@@ -8,27 +8,27 @@
 
 ## Small online setup (recommended)
 
-**One tiny setup file per operating system.** The downloaded bootstrap contains no Node.js runtime, no full Codex binary and no duplicated build dependencies.
+**One compact installer per operating system.** Each download already contains **every ClaudeBridge-owned file**: MCP server, task workers, SQLite/project memory logic, browser UI, native menu scripts, installer and uninstaller. It does not include the separate Node.js runtime or Codex binary.
 
 | Platform | Download |
 | --- | --- |
-| Windows | [ClaudeBridge-WebSetup-Windows.cmd](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-WebSetup-Windows.cmd) — double-click |
-| macOS | [ClaudeBridge-WebSetup-macOS.command](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-WebSetup-macOS.command) — open as an executable script |
-| Linux | [ClaudeBridge-WebSetup-Linux.run](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-WebSetup-Linux.run) — mark executable and launch |
+| Windows | [ClaudeBridge-Setup-Windows.cmd](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Setup-Windows.cmd) — double-click |
+| macOS | [ClaudeBridge-Setup-macOS.command](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Setup-macOS.command) — open as an executable script |
+| Linux | [ClaudeBridge-Setup-Linux.run](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Setup-Linux.run) — mark executable and launch |
 
 ### What is downloaded during installation?
 
-1. The small ClaudeBridge source/core bundle from the official [GitHub release](https://github.com/dabinuss/ClaudeBridge/releases/tag/preview). The setup contains its **expected SHA-256 checksum** and refuses any mismatched download.
-2. A **pinned Node.js LTS runtime**, downloaded directly from https://nodejs.org and checked against the Node.js SHASUMS256 manifest. It is installed **privately for ClaudeBridge**, with no global PATH changes.
+1. **ClaudeBridge's own application is already embedded in the installer** (MCP backend, complete UI, desktop companion and setup/removal scripts). No GitHub source or core archive is downloaded during installation.
+2. A **pinned Node.js LTS runtime**, downloaded directly from https://nodejs.org and checked against its SHA-256 manifest. It is used **privately by ClaudeBridge**, with no global PATH changes.
 3. **Codex CLI 0.167.0**, installed into ClaudeBridge's private `vendor` directory using npm from the official https://registry.npmjs.org registry with npm package-integrity verification, install scripts disabled and no global packages.
 
-Only the small bootstrap is downloaded upfront. The additional program files are transferred **during setup**, so internet access is required. This changes the *installer download size*, not necessarily the final amount of installed data.
+All ClaudeBridge-owned code is downloaded upfront inside the small installer. The additional program files are transferred **during setup**, so internet access is required. This changes the *installer download size*, not necessarily the final amount of installed data.
 
 The installer registers only its own `claudebridge` MCP server in Claude Desktop's user configuration and creates the optional native model-menu launcher if the installed Claude Desktop edition supports it. It preserves other MCP entries and does not modify the original Claude executable, system certificates or proxy settings.
 
 **To update or uninstall**, start **the same file** again. Existing private Node.js and ClaudeBridge files are reused for uninstall, so removing ClaudeBridge does not require redownloading the application. You may keep or explicitly delete saved plans and project memory; your project source code is never deleted.
 
-The former large `.mcpb` and fully bundled offline installers remain available in GitHub Actions build artifacts for advanced/offline installation, but are not the recommended download.
+The large fully-offline installers remain available through GitHub Actions build artifacts when needed; the recommended installers embed ClaudeBridge itself but download only external dependencies.
 
 **Compatibility:** These installers are tested in CI on Windows, macOS and Linux. Signed-in end-to-end Claude Desktop UI behavior, particularly the optional model-menu injection, remains experimental. On macOS, security settings may require explicit approval of a downloaded `.command` script; on Linux, desktop environments may require enabling executable permissions.
 
