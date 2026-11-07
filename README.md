@@ -2,7 +2,7 @@
 
 **Use Claude Desktop and Codex CLI together through ordinary Claude conversations. No slash commands required.**
 
-![Version](https://img.shields.io/badge/version-2.0.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
+![Version](https://img.shields.io/badge/version-2.1.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
 
 > Preview: ClaudeBridge runs as an MCP Desktop Extension. It cannot change the proprietary Claude chat UI, read hidden Claude conversation context, or bypass subscription limits.
 
@@ -37,6 +37,24 @@ Then simply say **“Ask Codex to review my code.”**, **“Let Codex write tes
 - “Show me progress from all active agents.”
 - “Review Codex's changes before integrating them.”
 - “Switch to the other registered project.”
+
+## Original prompts and plan continuity
+
+ClaudeBridge now keeps **two separate kinds of memory**:
+
+- **Zero-token activity journal:** Records source-file changes, Git state, timestamps and task events locally without invoking another model.
+- **Explicit decision memory:** Saves the user's original request, Claude's proposed plan, approval state, later revisions, and agent assignments.
+
+**Example:**
+
+1. Tell Claude: **“Create a plan to redesign the combat system.”** Claude should save the original request and its proposed plan with `bridge_plan`.
+2. Review the proposal. Tell Claude: **“I approve that plan. Ask Codex to implement the tests.”** Claude approves the saved version and delegates the work using its plan ID.
+3. Codex receives the exact approved plan revision, the original request, recent project events and the assigned task.
+4. If you change the plan, Claude creates a new revision and asks for approval again. Existing task bindings still identify the previous revision, so discrepancies can be detected and explained.
+
+**Not a hidden-thoughts mirror:** Claude Desktop does not give MCP extensions access to private reasoning or all user messages automatically. For reliable continuity, Claude must explicitly record the user request and the user-visible plan through the provided MCP tools. A running Codex task must explicitly poll its mailbox to see later updates.
+
+Plan revisions and approvals are auditable in the project SQLite database. The bridge can enforce that a plan-bound task uses an approved version, but it cannot technically prove that an LLM follows every plan instruction.
 
 ## Architecture
 
