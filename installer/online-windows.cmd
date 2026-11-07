@@ -80,7 +80,7 @@ try{
  $env:CLAUDEBRIDGE_NPM_CLI=$npm
  & $node (Join-Path $coreDir 'installer\online-deps.js') install
  if($LASTEXITCODE -ne 0){throw 'ClaudeBridge setup returned an error.'}
- Write-Host 'ClaudeBridge installed. Fully quit Claude and open ClaudeBridge Claude if the native launcher was installed.'
+ Write-Host 'ClaudeBridge installed. Fully quit Claude and reopen the normal Claude Desktop application.'
 }finally{
  Remove-Item -LiteralPath $root -Force -Recurse -ErrorAction SilentlyContinue
 }
