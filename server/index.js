@@ -83,6 +83,24 @@ function launchExecutable(binary,args){
   }
   return spawn(command,commandArgs,{cwd:root,windowsHide:true,stdio:['pipe','pipe','pipe'],shell:false});
 }
+function authStatus(binary) {
+  if(!binary) return 'not_installed';
+  // Avoid calling a test/mock launcher that does not implement the login subcommand.
+  if(process.env.CODEX_BIN) return 'not_checked';
+  let command=binary, args=['login','status'];
+  if(process.platform==='win32' && /\.cmd$/i.test(binary)){
+    const entry=path.join(path.dirname(binary),'node_modules','@openai','codex','bin','codex.js');
+    if(!fs.existsSync(entry)) return 'launcher_invalid';
+    command=process.execPath; args=[entry,...args];
+  } else if(/\.js$/i.test(binary)){
+    command=process.execPath; args=[binary,...args];
+  }
+  try {
+    const result=spawnSync(command,args,{encoding:'utf8',cwd:root,windowsHide:true,timeout:3000,maxBuffer:64*1024,shell:false});
+    if(result.error) return 'unknown';
+    return result.status===0?'signed_in':'not_signed_in';
+  } catch {return 'unknown';}
+}
 function appendLimited(file, data) {
   const used=fs.existsSync(file)?fs.statSync(file).size:0;
   if(used<MAX_LOG_BYTES) fs.appendFileSync(file,String(data).slice(0,MAX_LOG_BYTES-used));
@@ -163,9 +181,14 @@ function call(name,args={}){
   switch(name){
     case 'bridge_health': {
       const bin=cliLocation();
-      return {ready:Boolean(bin),project:root,codexAvailable:Boolean(bin),codexBinary:bin||null,
+      const login=authStatus(bin);
+      return {ready:Boolean(bin)&&login!=='not_signed_in'&&login!=='launcher_invalid',
+        project:root,codexAvailable:Boolean(bin),codexBinary:bin||null,loginStatus:login,
         bridgeVersion:'1.0.1',runningTasks:running.size,dataDirectory:meta,
-        nextStep:bin?'Ask Claude to delegate a read-only review to Codex.':'Install Codex CLI with npm install -g @openai/codex, run codex login, then restart Claude Desktop.'};
+        nextStep:!bin?'Install Codex CLI with npm install -g @openai/codex, then run codex login and restart Claude Desktop.':
+          login==='not_signed_in'?'Run codex login in PowerShell and retry.':
+          login==='launcher_invalid'?'The Codex Windows launcher could not be resolved. Reinstall @openai/codex.':
+          'Ask Claude to delegate a read-only review to Codex.'};
     }
     case 'bridge_delegate': return startTask(args.task,args.mode||'code');
     case 'bridge_status':return status(args.task_id,Boolean(args.include_events));
