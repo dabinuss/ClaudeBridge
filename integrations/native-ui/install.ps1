@@ -3,13 +3,16 @@ param(
   [string]$ExtensionRoot = ""
 )
 $ErrorActionPreference = "Stop"
-$base = Join-Path $env:LOCALAPPDATA "ClaudeBridge\NativePicker"
+$testing = [bool]$env:CLAUDEBRIDGE_NATIVE_TEST_ROOT
+$base = if($testing) { Join-Path $env:CLAUDEBRIDGE_NATIVE_TEST_ROOT "NativePicker" } else { Join-Path $env:LOCALAPPDATA "ClaudeBridge\NativePicker" }
 $shortcutName = "ClaudeBridge Claude.lnk"
-$menu = Join-Path ([Environment]::GetFolderPath("StartMenu")) "Programs"
+$menu = if($testing) { Join-Path $env:CLAUDEBRIDGE_NATIVE_TEST_ROOT "StartMenu" } else { Join-Path ([Environment]::GetFolderPath("StartMenu")) "Programs" }
 $link = Join-Path $menu $shortcutName
-$desktopLink = Join-Path ([Environment]::GetFolderPath("DesktopDirectory")) $shortcutName
+$desktopDir = if($testing) { Join-Path $env:CLAUDEBRIDGE_NATIVE_TEST_ROOT "Desktop" } else { [Environment]::GetFolderPath("DesktopDirectory") }
+$desktopLink = Join-Path $desktopDir $shortcutName
 
 function Get-ClaudeExe {
+  if($testing -and $env:CLAUDEBRIDGE_NATIVE_TEST_CLAUDE_EXE -and (Test-Path $env:CLAUDEBRIDGE_NATIVE_TEST_CLAUDE_EXE)) { return $env:CLAUDEBRIDGE_NATIVE_TEST_CLAUDE_EXE }
   $shell = New-Object -ComObject WScript.Shell
   $locations = @(
     (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Claude.lnk"),
@@ -70,6 +73,7 @@ Copy-Item -LiteralPath $settings -Destination (Join-Path $base "settings.js") -F
 $config = @{ claudeExe = $claudeExe; extensionRoot = (Resolve-Path $ExtensionRoot).Path }
 $config | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $base "native-ui.json") -Encoding UTF8
 $wsh = New-Object -ComObject WScript.Shell
+New-Item -ItemType Directory -Path $menu,$desktopDir -Force | Out-Null
 foreach($location in @($link,$desktopLink)) {
   $obj = $wsh.CreateShortcut($location)
   $obj.TargetPath = (Join-Path $base "node.exe")
