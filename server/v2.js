@@ -97,6 +97,7 @@ function delegate(args){
     if(!prompt||prompt.length>30000)throw Error('Task must contain 1–30,000 characters');
     if(!['code','review'].includes(mode))throw Error('Mode must be code or review');
     if(!codexBinary())throw Error('Codex is missing. Install the platform-specific extension.');
+    db.exec('BEGIN IMMEDIATE');
     const busy=listTasks(db,50).map(t=>live(t,db)).filter(t=>['queued','running'].includes(t.status));
     if(busy.length>=3)throw Error('Three Codex tasks are already active. Wait or cancel one.');
     const useWorktree=mode==='code'&&args.worktree!==false;
@@ -116,6 +117,7 @@ function delegate(args){
     }
     addTask(db,{id,mode,prompt,project_path:p.path,worktree:useWorktree,previous});
     if(planId)plans.bind(db,id,planId);
+    db.exec('COMMIT');
     const worker=path.join(__dirname,'worker.js');
     const child=spawn(process.execPath,[worker,p.path,id,codexBinary()],{
       cwd:p.path,detached:true,windowsHide:true,stdio:'ignore',shell:false
@@ -126,7 +128,7 @@ function delegate(args){
     ensureMemoryMonitor(p);
     return {id,status:'queued',project:p.name,mode,worktree:useWorktree,
       note:'Codex is running independently. Claude may continue other work. Ask for Codex status or check the project messages.'};
-  }finally{db.close();}
+  }catch(e){if(db.isTransaction){try{db.exec('ROLLBACK');}catch{}}throw e;}finally{db.close();}
 }
 function bridgeStatus(args){
   const [p,db]=projectDb();
