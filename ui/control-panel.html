@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{color-scheme:light dark;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+body{margin:0;padding:18px;color:var(--color-text-primary,inherit);background:transparent}
+h2{font-size:18px;margin:0 0 6px}p{font-size:12px;opacity:.75;margin:0 0 14px}
+.section{margin:12px 0;border:1px solid var(--color-border-tertiary,#8886);border-radius:12px;padding:12px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:9px 0}
+small{font-size:12px;opacity:.8}
+select,button{font:inherit;border:1px solid var(--color-border-tertiary,#8886);background:var(--color-background-secondary,transparent);color:inherit;border-radius:8px;padding:8px}
+button{cursor:pointer}button:disabled{opacity:.4;cursor:default}
+.status{display:inline-block;padding:3px 8px;border-radius:8px;background:var(--color-background-secondary,#8882);font-size:12px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+#msg{font-size:12px;white-space:pre-wrap;min-height:1em}
+</style></head><body>
+<h2>ClaudeBridge</h2><p>Model coordination · Local project memory · ChatGPT/Codex account</p>
+<div class="section">
+<div class="row"><strong>Agent mode</strong><select id="mode"><option value="off">Off</option><option value="manual">On demand</option><option value="fallback">Fallback</option><option value="dual">Dual agents</option></select></div>
+<small id="explanation">On demand: Claude delegates work to Codex when requested.</small>
+<div class="row"><label for="memory">Continuous working memory</label><input id="memory" type="checkbox" checked></div>
+</div>
+<div class="section">
+<div class="row"><strong>Codex CLI</strong><span class="status" id="installed">Checking…</span></div>
+<div class="row"><strong>ChatGPT sign-in</strong><span class="status" id="loginStatus">Checking…</span></div>
+<div class="actions"><button id="loginBtn">Connect ChatGPT</button><button id="refreshBtn">Refresh status</button></div>
+</div>
+<div id="msg" aria-live="polite"></div>
+<script type="module">
+/*__EXT_APPS_BUNDLE__*/
+const {App}=globalThis.ExtApps||{};
+const explanation={off:'Codex is disabled. Project notes remain stored.',manual:'Claude delegates tasks on request.',fallback:'Handoff when a limit is confirmed or you request it. Automatic Claude quota detection is not available.',dual:'Claude and Codex may work concurrently on separate tasks.'};
+const $=id=>document.getElementById(id);
+const app=App?new App({name:'ClaudeBridge Settings',version:'2.2.0'},{}):null;
+async function call(name,args){
+ if(!app)throw Error('This Claude host does not support interactive MCP apps.');
+ const result=await app.callServerTool({name,arguments:args});
+ if(result?.isError)throw Error(result.content?.[0]?.text||'Tool failed');
+ return JSON.parse(result.content?.[0]?.text||'{}');
+}
+function show(text){$('msg').textContent=text;}
+async function refresh(){
+ try{
+  const [config,health]=await Promise.all([call('bridge_settings',{action:'get'}),call('bridge_health',{})]);
+  $('mode').value=config.mode;
+  $('memory').checked=Boolean(config.memoryEnabled);
+  $('explanation').textContent=explanation[config.mode]||'';
+  $('installed').textContent=health.codexInstalled?'Installed':'Not installed';
+  $('loginStatus').textContent=health.codexLogin==='signed_in'?'Connected':health.codexLogin==='not_signed_in'?'Sign-in required':health.codexLogin;
+  $('loginBtn').textContent=health.codexLogin==='signed_in'?'Codex connected':'Connect ChatGPT';
+  $('loginBtn').disabled=health.codexLogin==='signed_in'||!health.codexInstalled;
+  show('');
+ }catch(e){show('Cannot refresh settings: '+e.message);}
+}
+$('mode').addEventListener('change',async e=>{try{await call('bridge_settings',{action:'set',mode:e.target.value});$('explanation').textContent=explanation[e.target.value];show('Mode saved.');}catch(err){show(err.message);}});
+$('memory').addEventListener('change',async e=>{try{await call('bridge_settings',{action:'set',memoryEnabled:e.target.checked});show('Working memory setting saved.');}catch(err){show(err.message);}});
+$('refreshBtn').addEventListener('click',refresh);
+$('loginBtn').addEventListener('click',async()=>{try{const r=await call('bridge_login',{});show(r.instructions||r.message||r.nextStep||'Follow ChatGPT sign-in instructions.');await refresh();}catch(e){show(e.message);}});
+if(app){app.ontoolresult=()=>refresh();await app.connect();await refresh();}else show('Interactive UI is not available in this Claude client. Use normal Claude chat to configure ClaudeBridge.');
+</script></body></html>
