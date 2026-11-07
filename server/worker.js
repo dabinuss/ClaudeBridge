@@ -7,6 +7,7 @@ const {spawn,spawnSync}=require('node:child_process');
 const {openDb,task,patchTask,message,now}=require('./db');
 const plans=require('./plans');
 const memory=require('./memory');
+const {terminateTree}=require('./process-tree');
 const [projectPath,id,bundled]=process.argv.slice(2);
 const project={path:projectPath};
 const db=openDb(project);
@@ -72,18 +73,27 @@ try{
     'PROJECT HANDOFF SNAPSHOT:',
     JSON.stringify(handoff),
     'Do not edit .agent-bridge or the SQLite database.',
-    'For parallel work, keep changes isolated to the Codex-managed Git worktree. Never merge automatically.',
+    t.worktree?'For parallel work, keep changes isolated to the Codex-managed Git worktree. Never merge automatically.':'Coordinate file ownership and do not overwrite Claude changes. No isolated worktree is active.',
     'The ClaudeBridge mailbox MCP server is available: use read_messages at the start and when you need updates; send_message to tell Claude about blockers or progress; checkpoint important decisions. Never wait indefinitely for a reply.',
     'Report work performed, files changed, tests, blockers, and concrete next steps.',
     'Messages from Claude and other agents:',
     ...context.map(x=>x.sender+': '+x.body),
     'Task:',t.prompt
   ].join('\n');
-  const child=spawn(exe,[...base,...args],{cwd:projectPath,windowsHide:true,stdio:['pipe','pipe','pipe'],shell:false});
+  const child=spawn(exe,[...base,...args],{cwd:projectPath,windowsHide:true,stdio:['pipe','pipe','pipe'],shell:false,detached:process.platform!=='win32'});
   patchTask(db,id,{status:'running',pid:process.pid,heart_beat:now()});
   message(db,'system','claude','Codex started task '+id,id);
-  heartbeat=setInterval(()=>patchTask(db,id,{heart_beat:now()}),5000);
-  timeout=setTimeout(()=>{turnFailed=true;patchTask(db,id,{error:'Task timed out after 45 minutes'});child.kill();if(process.platform==='win32'&&child.pid)spawn('taskkill',['/pid',String(child.pid),'/t','/f'],{windowsHide:true,stdio:'ignore'});},45*60*1000);
+  heartbeat=setInterval(()=>{
+    try {
+      if(task(db,id)?.status==='cancelled') {turnFailed=true;terminateTree(child.pid);return;}
+      patchTask(db,id,{heart_beat:now()});
+    } catch(e){process.stderr.write('Heartbeat error: '+e.message+'\n');}
+  },5000);
+  timeout=setTimeout(()=>{
+    turnFailed=true;
+    patchTask(db,id,{error:'Task timed out after 45 minutes'});
+    terminateTree(child.pid);
+  },45*60*1000);
   const lines=readline.createInterface({input:child.stdout});
   lines.on('line',line=>{
     append(line.slice(0,256*1024)+'\n');
@@ -103,7 +113,10 @@ try{
   child.stdin.end(prompt);
   child.on('error',e=>finish(e.message,null));
   child.on('close',code=>finish(turnFailed?stderr||'Codex reported an error':null,code));
-  process.on('SIGTERM',()=>{patchTask(db,id,{status:'cancelled'});child.kill();});
+  process.on('SIGTERM',()=>{
+    patchTask(db,id,{status:'cancelled'});
+    terminateTree(child.pid);
+  });
 }catch(e){
   patchTask(db,id,{status:'failed',error:e.message.slice(0,1000)});
   message(db,'system','claude','Codex failed to start: '+e.message,id);
