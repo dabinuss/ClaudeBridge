@@ -2,7 +2,7 @@
 
 **Run OpenAI Codex CLI alongside Claude Desktop with project-scoped handoffs, background tasks, and progress tracking.**
 
-> **Experimental v1.0.0:** Automated MCP smoke tests pass against a simulated Codex CLI. A live Claude Desktop / ChatGPT account end-to-end test has not yet been performed.
+> **Experimental v1.0.1:** Automated MCP smoke tests pass against a simulated Codex CLI. A live Claude Desktop / ChatGPT account end-to-end test has not yet been performed.
 
 ClaudeBridge is a lightweight, dependency-free [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server packaged as a Claude Desktop extension (`.mcpb`). Keep Claude as your main interface while delegating coding tasks and read-only reviews to the Codex CLI using its existing ChatGPT sign-in. No OpenAI API key or separate billing integration is required for this bridge.
 
@@ -23,23 +23,50 @@ ClaudeBridge is a lightweight, dependency-free [Model Context Protocol (MCP)](ht
 - [OpenAI Codex CLI](https://github.com/openai/codex) installed and signed in
 - A **local source-code directory** accessible to both Claude and Codex
 
-## Install on Windows
+## Quick start: install and use
 
-1. Install Codex CLI and sign in to your ChatGPT account:
+**For Windows users:**
+
+1. Install [Node.js LTS](https://nodejs.org/) if you do not already have it.
+2. Open PowerShell, install Codex and sign in **once**:
 
    ```powershell
    npm install -g @openai/codex
    codex login
    ```
 
-2. Download `ClaudeBridge.mcpb` (build from source below if needed).
-3. In Claude Desktop, open **Settings → Extensions → Advanced settings → Install Extension**. Labels can vary by release.
-4. Choose `ClaudeBridge.mcpb` and configure **Project directory** to the local folder containing the code you want to work on. This is **not** a Claude Project chat or a cloud folder.
-5. Open Claude and ask:
+3. Download **ClaudeBridge.mcpb** from the [latest release](https://github.com/dabinuss/ClaudeBridge/releases/latest). Until a release is published, obtain the build artifact from [GitHub Actions](https://github.com/dabinuss/ClaudeBridge/actions/workflows/build.yml) (GitHub login may be required).
+4. Double-click the `.mcpb` file, or open **Claude Desktop → Settings → Extensions → Install Extension**. Choose your **local code folder** when prompted.
+5. Restart Claude Desktop if needed, then say:
 
-   > Check `bridge_health` and read `bridge_context`. Then delegate a read-only code review to Codex and show me the result.
+   > **Set up ClaudeBridge, check if Codex is ready, and review my project with Codex.**
 
-If Codex is not detected, make sure `codex` works in a fresh terminal and restart Claude Desktop. On some Windows installations, CLI commands are installed as `codex.cmd`.
+**That's it for normal use.** You do not need to open a separate Codex window. Claude calls the tools and reports results in its own conversation.
+
+### Everyday Claude prompts
+
+| Say this to Claude | What ClaudeBridge does |
+| --- | --- |
+| “Ask Codex to review my code.” | Starts a read-only review |
+| “Let Codex write the tests while we work on the UI.” | Starts a background coding task (coordinate separate files) |
+| “What is Codex working on?” | Reads the latest task status |
+| “Stop the Codex task.” | Stops a running Codex subprocess |
+| “Save our decisions and hand off to Codex.” | Saves checkpoint notes and delegates work |
+| “Continue the previous Codex task.” | Resumes an available Codex session |
+
+You **do not** have to remember tool names or task IDs: Claude can call `bridge_health`, `bridge_delegate`, `bridge_status`, and the other tools for you.
+
+### Troubleshooting
+
+**Codex CLI is not found:** Confirm `codex --version` works in a fresh PowerShell session and restart Claude Desktop. For installations where Claude Desktop cannot see your PATH, set `CODEX_BIN` to the full path to your Codex executable in the local environment used to launch the extension.
+
+**Codex reports an authentication error:** Run `codex login` in PowerShell and retry the task.
+
+**Codex reports a Git repository error:** Select an initialized Git project folder or create one using `git init`.
+
+**Claude hit its usage limit:** ClaudeBridge does not bypass Claude's UI limits. Previously started Codex work can continue only while the bridge process remains alive.
+
+**Changing projects:** The current release has one configured local folder per extension instance. Update the extension's Project directory setting when switching workspaces.
 
 ## MCP tools
 
