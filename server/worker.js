@@ -81,7 +81,7 @@ try{
     'Task:',t.prompt
   ].join('\n');
   const child=spawn(exe,[...base,...args],{cwd:projectPath,windowsHide:true,stdio:['pipe','pipe','pipe'],shell:false,detached:process.platform!=='win32'});
-  patchTask(db,id,{status:'running',pid:process.pid,heart_beat:now()});
+  patchTask(db,id,{status:'running',pid:process.pid,child_pid:child.pid||null,heart_beat:now()});
   message(db,'system','claude','Codex started task '+id,id);
   heartbeat=setInterval(()=>{
     try {
