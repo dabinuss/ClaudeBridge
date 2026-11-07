@@ -5,6 +5,8 @@ const path=require('node:path');
 const readline=require('node:readline');
 const {spawn,spawnSync}=require('node:child_process');
 const {openDb,task,patchTask,message,now}=require('./db');
+const plans=require('./plans');
+const memory=require('./memory');
 const [projectPath,id,bundled]=process.argv.slice(2);
 const project={path:projectPath};
 const db=openDb(project);
@@ -58,10 +60,17 @@ try{
   if(!t.previous&&t.worktree&&t.mode==='code')args.push('--worktree');
   args.push('-');
   const context=db.prepare('SELECT sender,body FROM messages ORDER BY created DESC LIMIT 30').all().reverse();
+  const boundPlan=plans.forTask(db,id);
+  const handoff=memory.digest(projectPath);
   const prompt=[
     'You are Codex collaborating with Claude via ClaudeBridge.',
     'Project root: '+projectPath,
     'Mode: '+t.mode,
+    'ORIGINAL REQUEST AND APPROVED PLAN CONTRACT:',
+    boundPlan?JSON.stringify(boundPlan):'No approved plan is bound to this task. Follow the explicit task only.',
+    'A plan-bound task must follow the bound version. If you discover that it is invalid or conflicts with a newer plan, report the conflict to Claude through the mailbox; do not silently replace it.',
+    'PROJECT HANDOFF SNAPSHOT:',
+    JSON.stringify(handoff),
     'Do not edit .agent-bridge or the SQLite database.',
     'For parallel work, keep changes isolated to the Codex-managed Git worktree. Never merge automatically.',
     'The ClaudeBridge mailbox MCP server is available: use read_messages at the start and when you need updates; send_message to tell Claude about blockers or progress; checkpoint important decisions. Never wait indefinitely for a reply.',
