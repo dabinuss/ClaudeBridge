@@ -1,4 +1,4 @@
-# ClaudeBridge 2.2.1 — Stability, Security & Performance Audit
+# ClaudeBridge 2.4.0 — Stability, Security & Performance Audit
 
 Date: 2026-11-07  
 Scope: Windows/macOS/Linux MCPB installers, MCP API, in-chat UI, Codex worker lifecycle, SQLite state, project memory, plan handoffs, agent mailbox, and GitHub supply chain.
@@ -32,6 +32,20 @@ Passing CI demonstrates the tested behavior; it is not evidence that every platf
 | Medium | Outdated GitHub builds could overwrite recent Preview releases. | Serialize deployment and skip stale source revisions without failing successful test jobs. |
 | Medium | Package manifest was not checked with the official MCPB validator. | Add schema validation to all build jobs. |
 | Medium | Failed CI initially hid two invalid esbuild invocation/lookup assumptions. | Fix native esbuild invocation and resolve the SDK from the build-only package directory. |
+
+## Cross-platform native model-picker integration (2.4 preview)
+
+The optional ClaudeBridge-native control section is now implemented for Windows, macOS and Linux, using the same renderer and private Chrome DevTools Protocol pipe. It does not replace the MCP bridge or select a different language model.
+
+| Platform | User launcher | Native install/rollback test | Full data cleanup test |
+| --- | --- | --- | --- |
+| Windows | Desktop and Start Menu shortcuts | PowerShell isolation test | PowerShell audit/purge test |
+| macOS | User-owned ClaudeBridge Claude.app | Node isolation test on macOS CI | Node audit/purge test |
+| Linux | User-owned .desktop application launcher | Node isolation test on Ubuntu CI | Node audit/purge test |
+
+The optional launcher requires the original Claude Desktop executable to accept Electron's debugging-pipe switch. **Actual interactive use in authenticated Claude Desktop has not been verified across all three platforms.** Mocked DOM and CDP tests and clean installer jobs do not substitute for that live GUI validation.
+
+The original Claude application, its native shortcuts, model responses, network stack, certificates and MCP extension are deliberately unchanged. Native companion files are tracked through ownership markers or verified shortcut targets. Users can choose between native integration removal and full deletion of the project-local Bridge state. Neither removes actual project source files.
 
 ## Remaining important risks
 
