@@ -247,7 +247,7 @@ jobs:
           bash -n installer/online-unix.sh
           sh ./ClaudeBridge-Setup-Linux.run --verify-core
           sh ./ClaudeBridge-Setup-macOS.command --verify-core
-          node -e 'const f=require("fs"),s=f.readFileSync("ClaudeBridge-Setup-Windows.cmd","utf8"),z=s.split("# CLAUDEBRIDGE CORE PAYLOAD"); if(z.length!==2||Buffer.from(z[1].trim(),"base64").length<10000)process.exit(1);'
+          node -e 'const f=require("fs"),s=f.readFileSync("ClaudeBridge-Setup-Windows.cmd","utf8"),i=s.lastIndexOf("# CLAUDEBRIDGE CORE PAYLOAD"); if(i<0||Buffer.from(s.slice(i+"# CLAUDEBRIDGE CORE PAYLOAD".length).trim(),"base64").length<10000)process.exit(1);'
       - name: Remove obsolete non-platform preview asset
         if: steps.current.outputs.publish == 'true'
         env:
