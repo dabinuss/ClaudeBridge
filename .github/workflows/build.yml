@@ -1,0 +1,29 @@
+name: Test and package
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run MCP smoke tests
+        run: node tests/smoke.js
+      - name: Package Desktop Extension
+        run: |
+          zip -q -r ClaudeBridge.mcpb manifest.json server/
+      - name: Upload installable package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ClaudeBridge-mcpb
+          path: ClaudeBridge.mcpb
+          if-no-files-found: error
