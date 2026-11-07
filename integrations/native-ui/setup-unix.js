@@ -19,6 +19,7 @@ const desktopIcon=path.join(root,'Desktop','claudebridge-claude.desktop');
 const mk=(p)=>fs.mkdirSync(p,{recursive:true,mode:0o700});
 const shellQuote=(value)=>"'"+String(value).replaceAll("'","'\\''")+"'";
 function regular(p){try{const st=fs.lstatSync(p);return st.isFile()&&!st.isSymbolicLink();}catch(e){if(e.code==='ENOENT')return false;throw e;}}
+function executable(p){try{return fs.statSync(p).isFile();}catch(e){if(e.code==='ENOENT')return false;throw e;}}
 function pathSafe(p){try{const st=fs.lstatSync(p);return !st.isSymbolicLink();}catch(e){if(e.code==='ENOENT')return true;throw e;}}
 function validatePlatform(){if(!['darwin','linux'].includes(platform))throw Error('Unix native picker supports macOS and Linux only');}
 function owner(){
@@ -43,7 +44,7 @@ function status(){
 function detectClaude(){
  const supplied=process.env.CLAUDEBRIDGE_CLAUDE_EXECUTABLE;
  if(supplied){
-  if(!path.isAbsolute(supplied)||!regular(supplied))throw Error('Specified Claude executable must be an existing absolute file');
+  if(!path.isAbsolute(supplied)||!executable(supplied))throw Error('Specified Claude executable must be an existing absolute file');
   return fs.realpathSync(supplied);
  }
  const choices=platform==='darwin'?[
@@ -55,10 +56,10 @@ function detectClaude(){
   path.join(home,'.local/bin/claude-desktop'),
   path.join(home,'Applications/Claude.AppImage')
  ];
- for(const p of choices)if(regular(p))return fs.realpathSync(p);
+ for(const p of choices)if(executable(p))return fs.realpathSync(p);
  if(platform==='linux'){
   const cli=spawnSync('which',['claude-desktop'],{encoding:'utf8',timeout:3000});
-  if(cli.status===0&&regular(cli.stdout.trim()))return fs.realpathSync(cli.stdout.trim());
+  if(cli.status===0&&executable(cli.stdout.trim()))return fs.realpathSync(cli.stdout.trim());
  }
  throw Error('Claude Desktop executable not found. Supply CLAUDEBRIDGE_CLAUDE_EXECUTABLE=/absolute/path/to/Claude');
 }
