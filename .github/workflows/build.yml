@@ -109,29 +109,36 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Refuse stale preview builds
+      - name: Check current source revision
+        id: current
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           HEAD=$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)
-          if [ "$HEAD" != "$GITHUB_SHA" ]; then
+          if [ "$HEAD" = "$GITHUB_SHA" ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
             echo "Skipping outdated preview build."
-            exit 1
+            echo "publish=false" >> "$GITHUB_OUTPUT"
           fi
       - name: Download all platform packages
+        if: steps.current.outputs.publish == 'true'
         uses: actions/download-artifact@v4
         with:
           pattern: ClaudeBridge-*
           merge-multiple: true
       - name: Remove obsolete non-platform preview asset
+        if: steps.current.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: gh release delete-asset preview ClaudeBridge.mcpb -y 2>/dev/null || true
       - name: Generate SHA-256 checksums
+        if: steps.current.outputs.publish == 'true'
         run: sha256sum ClaudeBridge-*.mcpb > SHA256SUMS
       - name: Publish preview installers
+        if: steps.current.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
