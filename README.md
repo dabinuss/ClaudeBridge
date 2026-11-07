@@ -34,7 +34,7 @@ The large fully-offline installers remain available through GitHub Actions build
 
 ## ClaudeBridge control panel inside Claude
 
-ClaudeBridge 2.4.0 includes an interactive **MCP Apps** control panel without replacing the MCP bridge. In your Claude conversation, ask:
+ClaudeBridge 2.6.0 includes an interactive **MCP Apps** control panel without replacing the MCP bridge. In your Claude conversation, ask:
 
 > **Open ClaudeBridge settings.**
 
@@ -59,13 +59,15 @@ The earlier CDP companion needed a *separate launcher*. It violates this project
 
 See [binding product requirements](docs/PRODUCT-REQUIREMENTS.md). We will not claim native Chat menu support until the normal, unmodified Claude launcher has been verified end-to-end on Windows, macOS and Linux.
 
-## Easy installation
+## First use in the normal Claude Desktop app
 
-1. Download your operating system's extension from [GitHub Releases](https://github.com/dabinuss/ClaudeBridge/releases/tag/preview): **ClaudeBridge-Windows.mcpb**, **ClaudeBridge-macOS.mcpb**, or **ClaudeBridge-Linux.mcpb**.
-2. Open **Claude Desktop → Settings → Desktop App → Extensions → Advanced Settings → Install Extension** and select the downloaded file. The relevant Codex CLI is bundled — no separate npm or global Codex installation should be necessary.
-3. Say to Claude: **“Set up ClaudeBridge, connect my local code project, and help me sign in to Codex.”** Follow the one-time ChatGPT sign-in instructions. You must authorize access to your own account.
+1. Download and run the appropriate small **ClaudeBridge-Setup** file in the release above. All Bridge-owned scripts are embedded. Only the private Node.js runtime and pinned Codex CLI download on first install.
+2. Restart **the original Claude Desktop icon**. ClaudeBridge is registered as a local MCP server, with no special launcher or modified Claude executable.
+3. Ask Claude: **“Check ClaudeBridge, select my local code project and connect Codex if necessary.”** If Codex is already signed in, the existing account is used; otherwise approve one-time device sign-in.
 
-Then simply say **“Ask Codex to review my code.”**, **“Let Codex write tests while we work on the UI.”**, **“What is Codex doing?”**, or **“Continue the interrupted Codex task.”**
+Examples: **“Open ClaudeBridge settings”**, **“Ask Codex to review my code”**, **“Let Codex write tests while we work on the UI”**, **“What is Codex doing?”**.
+
+The standard MCP server now also advertises four named prompts for settings, dual-agent work, independent review and account login. An optional account-level Chat skill is bundled under `claude-plugin/` but is not auto-installed in your Claude account; see [Chat integration](docs/CHAT-INTEGRATION.md).
 
 ## Features
 
@@ -115,30 +117,11 @@ Claude Desktop communicates with the ClaudeBridge MCP server. The server manages
 
 ## Complete uninstall and data cleanup (all platforms)
 
-The native menu companion, ClaudeBridge MCP extension and saved project memory are **separate** so uninstalling the UI never silently deletes your work.
+Run the **same ClaudeBridge-Setup file again** and select uninstall. The installer removes the ClaudeBridge-owned local MCP registration and its files without modifying other MCP servers or your projects. You may explicitly choose to delete saved ClaudeBridge settings, plans and project memory; project source code is preserved.
 
-1. Fully quit Claude Desktop and any ClaudeBridge worker processes.
-2. Click **Remove integration** in ClaudeBridge settings to remove the optional native menu launcher.
-3. Remove the ClaudeBridge MCPB in Claude Desktop **Settings → Extensions** (the MCPB is owned by Claude's extension manager).
-4. Optionally remove saved tasks, settings, plans and file history. Review what would be removed before selecting permanent deletion.
+If you used the older experimental **ClaudeBridge Claude** shortcut, the legacy `bridge_native_picker(action=remove)` MCP tool is still available for cleanup. New installation of that shortcut is disabled. The original Claude launcher is always used.
 
-**Windows PowerShell** (from a ClaudeBridge source checkout):
-
-```powershell
-.\maintenance\cleanup.ps1 -AuditOnly -PurgeBridgeState -PurgeProjectMemory
-.\maintenance\cleanup.ps1 -PurgeProjectMemory -PurgeBridgeState
-```
-
-**macOS / Linux**:
-
-```bash
-node maintenance/cleanup-unix.js --audit --purge-state --purge-project-memory
-node maintenance/cleanup-unix.js --yes --purge-project-memory --purge-state
-```
-
-The scripts remove only ClaudeBridge-owned launchers and registered project state under `.agent-bridge/`. **Your source-code projects, Claude Desktop, global Codex CLI, and ChatGPT login are not deleted.** The platform cleanup reports paths that remain (for example, if a background worker still has files open). User-created backups or orphaned project folders not found in the registry are outside the automatic cleanup inventory.
-
-See the [audit report](docs/AUDIT.md) for tested safeguards and limitations.
+For advanced/manual cleanup, see `maintenance/cleanup.ps1` (Windows) and `maintenance/cleanup-unix.js` (macOS/Linux). Neither should be used to delete source projects.
 
 ## Important limitations
 
