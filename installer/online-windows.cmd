@@ -2,7 +2,7 @@
 setlocal
 set "CLAUDEBRIDGE_SETUP_SCRIPT=%~f0"
 set "CLAUDEBRIDGE_SETUP_ARGS=%*"
-powershell.exe -NoProfile -Command "$s=[IO.File]::ReadAllText($env:CLAUDEBRIDGE_SETUP_SCRIPT); $mark=('# CLAUDEBRIDGE'+' POWERSHELL START'); $pos=$s.IndexOf($mark); if($pos -lt 0){throw 'Invalid setup file'}; Invoke-Expression $s.Substring($pos + $mark.Length)"
+powershell.exe -NoProfile -Command "$s=[IO.File]::ReadAllText($env:CLAUDEBRIDGE_SETUP_SCRIPT); $mark=('# CLAUDEBRIDGE'+' POWERSHELL START'); $end=('# CLAUDEBRIDGE'+' CORE PAYLOAD'); $pos=$s.IndexOf($mark); $stop=$s.LastIndexOf($end); if($pos -lt 0 -or $stop -le $pos){throw 'Invalid embedded ClaudeBridge setup'}; Invoke-Expression $s.Substring($pos + $mark.Length,$stop - $pos - $mark.Length)"
 exit /b %errorlevel%
 # CLAUDEBRIDGE POWERSHELL START
 $ErrorActionPreference='Stop'
@@ -13,6 +13,7 @@ $cli=[string]$env:CLAUDEBRIDGE_SETUP_ARGS
 if($cli -match '(^|\s)(--uninstall|uninstall)(\s|$)'){$mode='uninstall'}
 if($cli -match '(^|\s)(--status|status)(\s|$)'){$mode='status'}
 if($cli -match '--purge-data'){$purge=$true}
+if($cli -match '(^|\s)--verify-core(\s|$)'){$mode='verify-core'}
 $base=if($env:CLAUDEBRIDGE_SETUP_TEST_HOME){$env:CLAUDEBRIDGE_SETUP_TEST_HOME}else{Join-Path $env:LOCALAPPDATA 'ClaudeBridge'}
 $installed=Join-Path $base 'Installed'
 $nodeInstalled=Join-Path $installed 'integrations\native-ui\node.exe'
@@ -44,18 +45,21 @@ $root=Join-Path ([IO.Path]::GetTempPath()) ('ClaudeBridgeOnline-'+[guid]::NewGui
 New-Item -ItemType Directory -Path $root -Force | Out-Null
 try{
  $core=Join-Path $root 'core.tar.gz'
- $expected='__CORE_SHA256__'
- $url='https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Online-Core.tar.gz'
- [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
- Write-Host 'Downloading SHA256-pinned ClaudeBridge application...'
- Invoke-WebRequest -Uri $url -OutFile $core -UseBasicParsing -MaximumRedirection 5
- if((Get-FileHash $core -Algorithm SHA256).Hash -ine $expected){
-   throw 'ClaudeBridge package SHA256 verification failed. Installation stopped.'
- }
+ # All ClaudeBridge-owned program scripts and UI are inside this very same file.
+ $source=[IO.File]::ReadAllText($env:CLAUDEBRIDGE_SETUP_SCRIPT)
+ $mark='# CLAUDEBRIDGE CORE PAYLOAD'
+ $index=$source.LastIndexOf($mark)
+ if($index -lt 0){throw 'Embedded ClaudeBridge application missing'}
+ $encoded=$source.Substring($index+$mark.Length).Trim()
+ [IO.File]::WriteAllBytes($core,[Convert]::FromBase64String($encoded))
  $coreDir=Join-Path $root 'core'
  New-Item -ItemType Directory -Path $coreDir | Out-Null
  & tar.exe -xzf $core -C $coreDir
- if($LASTEXITCODE -ne 0){throw 'Failed to extract the ClaudeBridge application.'}
+ if($LASTEXITCODE -ne 0){throw 'Failed to extract the embedded ClaudeBridge application.'}
+ if($mode -eq 'verify-core'){
+   Write-Host 'Embedded ClaudeBridge application extracted successfully.'
+   exit 0
+ }
  $nodeVer='22.23.4'
  $archive="node-v$nodeVer-win-x64.zip"
  $nodeBase="https://nodejs.org/dist/v$nodeVer"
