@@ -61,12 +61,15 @@ function live(t,db){
   return t;
 }
 function nativePicker(args={}){
-  if(process.platform!=='win32')return {
-    supported:false,installed:false,
-    message:'The optional native model-menu companion currently supports Windows only. MCP remains available.'
-  };
   const action=args.action||'status';
   if(!['install','remove','status'].includes(action))throw Error('Unknown native picker action');
+  if(process.platform==='darwin'||process.platform==='linux'){
+    const unix=require('../integrations/native-ui/setup-unix');
+    if(action==='status')return unix.status();
+    if(action==='install')return unix.install(path.resolve(__dirname,'..'));
+    return unix.remove();
+  }
+  if(process.platform!=='win32')return {supported:false,installed:false,message:'Unsupported desktop platform.'};
   const script=path.join(__dirname,'..','integrations','native-ui','install.ps1');
   if(!fs.existsSync(script))throw Error('Native picker installer is missing. Update ClaudeBridge.');
   if(action==='status'){
@@ -74,7 +77,7 @@ function nativePicker(args={}){
     const installed=fs.existsSync(path.join(destination,'companion.js'))&&fs.existsSync(path.join(destination,'node.exe'));
     return {supported:true,installed,
       mode:'optional_renderer_companion',requiresRestart:true,
-      nextStep:installed?'Quit Claude completely and open the ClaudeBridge Claude shortcut.':'Install the optional native picker using bridge_native_picker(action=install).'};
+      nextStep:installed?'Quit Claude completely and open the ClaudeBridge Claude shortcut.':'Install the optional native picker from ClaudeBridge settings.'};
   }
   const cmd=spawnSync('powershell.exe',[
     '-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',script,
@@ -270,7 +273,7 @@ const specs=[
  {name:'bridge_health',description:'Check whether ClaudeBridge is installed, Codex is signed in, and a local project is selected. Use this automatically when user mentions Codex.',inputSchema:props({})},
  {name:'bridge_settings',description:'Get or change ClaudeBridge mode: off, manual, fallback, dual. Fallback requires an explicit handoff or supported external trigger, not an invented quota event. Updates also affect optional desktop UI.',inputSchema:props({action:{type:'string',enum:['get','set']},mode:{type:'string',enum:['off','manual','fallback','dual']},memoryEnabled:{type:'boolean'},autoResume:{type:'boolean'}},['action'])},
  {name:'bridge_control_panel',description:'Open the interactive ClaudeBridge settings panel inside the existing Claude conversation, including Off/Manual/Fallback/Dual, memory, and Codex installation and login status.',inputSchema:props({}),_meta:{ui:{resourceUri:appUI.URI}}},
- {name:'bridge_native_picker',description:'Install, remove, or inspect the OPTIONAL Windows Claude Desktop model-menu companion. Installation creates a separate ClaudeBridge Claude shortcut; the original Claude launcher, network traffic, TLS and MCP configuration remain untouched. User must restart Claude through the new shortcut.',inputSchema:props({action:{type:'string',enum:['install','remove','status']}},['action'])},
+ {name:'bridge_native_picker',description:'Install, remove, or inspect the OPTIONAL Windows/macOS/Linux Claude Desktop model-menu companion. Installation creates a separate ClaudeBridge Claude shortcut; the original Claude launcher, network traffic, TLS and MCP configuration remain untouched. User must restart Claude through the new shortcut.',inputSchema:props({action:{type:'string',enum:['install','remove','status']}},['action'])},
  {name:'bridge_project',description:'Register and activate a local code project, switch projects, or list available projects. Ask user for a path only if none is known.',inputSchema:props({action:{type:'string',enum:['list','register','select']},path:{type:'string'},name:{type:'string'},id:{type:'string'}},['action'])},
  {name:'bridge_delegate',description:'Delegate work. For execution of an agreed plan, include plan_id so Codex receives its immutable approved revision. Never invent user approval.',inputSchema:props({task:{type:'string'},mode:{type:'string',enum:['code','review']},worktree:{type:'boolean'},previous:{type:'string'},plan_id:{type:'string'},trigger:{type:'string',enum:['manual','limit_confirmed']}},['task'])},
  {name:'bridge_plan',description:'Persist original user request and explicit plan, view history, propose revisions, or activate only after the user approves. When asked to create a plan, first save the proposed plan. Do not execute a draft without approval.',inputSchema:props({action:{type:'string',enum:['list','get','propose','approve','revise','complete']},plan_id:{type:'string'},title:{type:'string'},original_request:{type:'string'},plan:{type:'string'},reason:{type:'string'},user_confirmed:{type:'boolean'}},['action'])},
