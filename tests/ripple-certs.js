@@ -5,7 +5,6 @@ const {execFileSync}=require('node:child_process');
 const {createIdentity,fingerprint}=require('../integrations/ripple-lite/certs');
 const temp=fs.mkdtempSync(path.join(os.tmpdir(),'cb-certs-'));
 try{
- try{execFileSync('openssl',['version'],{stdio:'ignore'});}catch{console.log('SKIP: openssl executable unavailable');process.exit(0);}
  const p=createIdentity(temp);
  assert.equal(fs.existsSync(p.ca),true);
  const ca=new crypto.X509Certificate(fs.readFileSync(p.ca));
