@@ -41,6 +41,16 @@ function command(operation,ca,platform=process.platform,env=process.env){
 function apply(operation,ca,{confirm=false,platform=process.platform,run=execute,env=process.env}={}){
  if(confirm!==true)throw Error('Explicit user approval required to modify certificate trust');
  const details=identity(ca);
+ if(platform==='linux'&&operation==='trust'){
+  const db=env.CLAUDEBRIDGE_NSS_DB||path.join(os.homedir(),'.pki','nssdb');
+  fs.mkdirSync(db,{recursive:true,mode:0o700});
+  if(!fs.existsSync(path.join(db,'cert9.db')))
+   run('certutil',['-d','sql:'+db,'-N','--empty-password']);
+ }
+ if(platform==='darwin'&&operation==='untrust'){
+  // Remove explicit trust before removing the leaf from the login keychain.
+  try{run('security',['remove-trusted-cert',ca]);}catch{}
+ }
  const c=command(operation,ca,platform,env);
  run(c.name,c.args);
  return {operation,fingerprint:details.sha256};
