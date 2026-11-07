@@ -56,6 +56,18 @@ function diagnose(){
       login.status!=='signed_in'?'One-time sign-in required. Ask Claude to start Codex sign-in or run codex login.':'Ask Claude to delegate a task to Codex.',
     interface:'Natural language in Claude Desktop; no slash commands are required.'};
 }
+function ensureWatchdog(p){
+  const file=path.join(p.path,'.agent-bridge','watchdog.pid');
+  if(fs.existsSync(file)){
+    const pid=Number(fs.readFileSync(file,'utf8').trim());
+    if(pid>0){try{process.kill(pid,0);return;}catch{}}
+  }
+  const child=spawn(process.execPath,[path.join(__dirname,'watchdog.js'),p.path],{
+    cwd:p.path,detached:true,windowsHide:true,stdio:'ignore',shell:false
+  });
+  child.on('error',()=>{});
+  child.unref();
+}
 function delegate(args){
   const [p,db]=projectDb();
   try{
@@ -85,6 +97,7 @@ function delegate(args){
     });
     child.on('error',()=>{});
     child.unref();
+    ensureWatchdog(p);
     return {id,status:'queued',project:p.name,mode,worktree:useWorktree,
       note:'Codex is running independently. Claude may continue other work. Ask for Codex status or check the project messages.'};
   }finally{db.close();}
