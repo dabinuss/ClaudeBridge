@@ -330,15 +330,45 @@ function call(name,args={}){
     default:throw Error('Unknown tool: '+name);
   }
 }
+// Standard MCP prompts provide discoverable conversation workflows without UI injection,
+// separate Claude launchers or account-level plugin installation.
+const promptCatalog=[
+ {name:'claudebridge-settings',description:'Check ClaudeBridge status and change Codex agent modes in the current Claude conversation.',arguments:[]},
+ {name:'claudebridge-dual',description:'Coordinate Claude and Codex on independent parts of a user-approved project task.',arguments:[{name:'task',description:'The task to coordinate',required:true}]},
+ {name:'claudebridge-review',description:'Ask Codex for an independent review of the selected local project.',arguments:[{name:'focus',description:'Optional review focus',required:false}]},
+ {name:'claudebridge-login',description:'Connect a ChatGPT account to Codex only if sign-in is missing.',arguments:[]}
+];
+function promptMessages(name,args={}){
+ let instruction;
+ switch(name){
+  case 'claudebridge-settings':
+   instruction='Use bridge_health and bridge_settings(action=get). If the user wants an interactive panel, call bridge_control_panel. Explain Off, On demand, Fallback, Dual without suggesting a second launcher. Change the selected mode only after the user chooses one.';
+   break;
+  case 'claudebridge-dual':
+   if(typeof args.task!=='string'||!args.task.trim())throw Error('The task argument is required');
+   instruction='Coordinate this task using ClaudeBridge: '+args.task.trim().slice(0,5000)+'. First inspect bridge_health, bridge_settings, bridge_project(action=list) and bridge_context if a project is selected. Respect the current mode and ask for any needed user approval. Divide non-overlapping sub-tasks; delegate only approved portions to Codex via bridge_delegate using Git worktrees. Never claim that parallel agents are running before successful tool confirmation.';
+   break;
+  case 'claudebridge-review':
+   instruction='First inspect bridge_health and bridge_project(action=list). Ask for a project only if none is active. If the active mode permits a review, request an independent Codex review via bridge_delegate(mode=review) focused on '+String(args.focus||'correctness, security and maintainability').slice(0,300)+'. Present task ID and status accurately.';
+   break;
+  case 'claudebridge-login':
+   instruction='Check bridge_health before login. Only if Codex is installed but not signed in, ask permission to begin device authentication and then call bridge_login. Do not ask for or collect credentials in chat.';
+   break;
+  default:throw Error('Unknown ClaudeBridge prompt');
+ }
+ return {description:promptCatalog.find(x=>x.name===name).description,messages:[{role:'user',content:{type:'text',text:instruction}}]};
+}
 function respond(obj){process.stdout.write(JSON.stringify(obj)+'\n');}
 async function handle(req){
   if(!req||req.jsonrpc!=='2.0'||!req.method||req.id===undefined)return;
   try{
     let result;
-    if(req.method==='initialize')result={protocolVersion:req.params?.protocolVersion||'2025-06-18',serverInfo:{name:'claudebridge',version:'2.6.0'},capabilities:{tools:{},resources:{}},
+    if(req.method==='initialize')result={protocolVersion:req.params?.protocolVersion||'2025-06-18',serverInfo:{name:'claudebridge',version:'2.6.0'},capabilities:{tools:{},resources:{},prompts:{}},
       instructions:'Use ClaudeBridge naturally. First read bridge_settings and bridge_health for coding requests. If mode=off do not delegate. If mode=manual delegate when asked. If mode=dual, use bridge_context and bridge_memory, split substantial coding tasks into independent work and delegate one to Codex while Claude works on separate files; avoid simultaneous edits to the same file. If mode=fallback do not start Codex unless the user requests handoff or an actual external quota event is confirmed; the bridge cannot detect Claude quota through MCP alone. When user wants UI controls, open bridge_control_panel. Save explicit instructions and proposed plans with bridge_plan and bind approved plan IDs when delegating. Consult the mailbox, inspect all Codex worktrees before merging, and report status plainly. Never claim to read hidden Claude threads, automatically detect quota, or replace the native model picker.'};
     else if(req.method==='ping')result={};
     else if(req.method==='tools/list')result={tools:specs};
+    else if(req.method==='prompts/list')result={prompts:promptCatalog};
+    else if(req.method==='prompts/get')result=promptMessages(req.params?.name,req.params?.arguments||{});
     else if(req.method==='resources/list')result=appUI.listResources();
     else if(req.method==='resources/read')result=appUI.readResource(req.params?.uri);
     else if(req.method==='tools/call'){
