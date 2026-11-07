@@ -47,9 +47,11 @@ function openDb(project){
   const gitignore=path.join(dir,'.gitignore');
   if(!fs.existsSync(gitignore))fs.writeFileSync(gitignore,'*\n',{mode:0o600});
   const db=new DatabaseSync(path.join(dir,'state.sqlite'),{timeout:5000});
-  db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');
+  db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;');
   db.exec("CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, mode TEXT NOT NULL, prompt TEXT NOT NULL, status TEXT NOT NULL, session_id TEXT, pid INTEGER, created TEXT NOT NULL, updated TEXT NOT NULL, last_message TEXT DEFAULT '', error TEXT, project_path TEXT NOT NULL, worktree INTEGER DEFAULT 0, exit_code INTEGER, heart_beat TEXT, last_activity TEXT DEFAULT '', previous TEXT);");
   db.exec("CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, created TEXT NOT NULL, sender TEXT NOT NULL, recipient TEXT NOT NULL, body TEXT NOT NULL, task_id TEXT);");
+  const cols=db.prepare('PRAGMA table_info(tasks)').all().map(x=>x.name);
+  if(!cols.includes('child_pid'))db.exec('ALTER TABLE tasks ADD COLUMN child_pid INTEGER');
   db.exec("CREATE INDEX IF NOT EXISTS idx_task_updated ON tasks(updated); CREATE INDEX IF NOT EXISTS idx_msg_time ON messages(created);");
   return db;
 }
@@ -57,7 +59,7 @@ function addTask(db,task){
   db.prepare('INSERT INTO tasks(id,mode,prompt,status,created,updated,project_path,worktree,previous) VALUES(?,?,?,?,?,?,?,?,?)').run(task.id,task.mode,task.prompt,'queued',now(),now(),task.project_path,task.worktree?1:0,task.previous||null);
 }
 function patchTask(db,id,patch){
-  const allowed=['status','session_id','pid','updated','last_message','error','exit_code','heart_beat','last_activity'];
+  const allowed=['status','session_id','pid','child_pid','updated','last_message','error','exit_code','heart_beat','last_activity'];
   const keys=Object.keys(patch).filter(k=>allowed.includes(k));
   if(!keys.length)return;
   const sql='UPDATE tasks SET '+keys.map(k=>k+'=?').join(',')+',updated=? WHERE id=?';
