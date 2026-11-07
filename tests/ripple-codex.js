@@ -1,0 +1,20 @@
+'use strict';
+const assert=require('node:assert/strict');
+const path=require('node:path');
+const {ROUTE_ID,promptFor,runCodex,anthropicMessage,writeAnswer}=require('../integrations/ripple-lite/codex-model');
+(async()=>{
+ const req={model:ROUTE_ID,system:'Be useful',messages:[{role:'user',content:'hello'}]};
+ assert.match(promptFor(req),/hello/);
+ assert.throws(()=>promptFor({...req,tools:[{name:'Bash'}]}),/tool use/);
+ const text=await runCodex(req,{binary:path.join(__dirname,'fixtures','mock-codex.js'),timeoutMs:5000});
+ assert.equal(text,'Codex says hello');
+ assert.equal(anthropicMessage(text).content[0].text,text);
+ let output='',headerStatus;
+ const res={writeHead:(status)=>headerStatus=status,write:d=>{output+=d;},end:d=>{output+=d||'';}};
+ writeAnswer(res,text,{stream:true});
+ assert.equal(headerStatus,200);
+ assert.match(output,/event: message_start/);
+ assert.match(output,/event: message_stop/);
+ assert.match(output,/Codex says hello/);
+ console.log('PASS: live Codex-style CLI subprocess routing and Anthropic text/SSE response');
+})().catch(e=>{console.error(e);process.exitCode=1;});

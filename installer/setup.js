@@ -146,16 +146,16 @@ function install(){
  const previouslyOwned=existingData.backupCreated===true;
  const configCreated=existingData.configCreated===true||!fs.existsSync(configPath);
  const backupExisted=fs.existsSync(backup);
- writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.6.0',installedAt:new Date().toISOString(),backupCreated:previouslyOwned,configCreated})+'\n');
+ writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.7.0',installedAt:new Date().toISOString(),backupCreated:previouslyOwned,configCreated})+'\n');
  configure('install');
  if(!backupExisted&&fs.existsSync(backup))
-  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.6.0',installedAt:new Date().toISOString(),backupCreated:true,configCreated})+'\n');
+  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.7.0',installedAt:new Date().toISOString(),backupCreated:true,configCreated})+'\n');
  // ClaudeBridge must work through the original Claude Desktop launcher.
  // The experimental CDP companion needs a second launcher and is not installed.
  const nativeResult={installed:false,skipped:true,
   reason:'Legacy launcher integration is disabled; native Chat model-menu support remains unverified.'};
  log(JSON.stringify({ok:true,mcp:true,native:nativeResult,config:configPath,
-  message:'ClaudeBridge MCP registered. Quit Claude completely and relaunch using ClaudeBridge Claude if the native launcher was installed. Log into Codex once.'}));
+  message:'ClaudeBridge MCP registered. Ripple-lite setup is handled by the single-file installer. Quit and reopen normal Claude Desktop.'}));
 }
 function purgePrivateMemory(){
  const bridgeHome=process.env.CLAUDEBRIDGE_SETUP_TEST_HOME?
@@ -190,6 +190,15 @@ function purgePrivateMemory(){
  return {removed,skipped};
 }
 function uninstall(){
+ // Restore Claude's original proxy and remove user-trusted TLS identity BEFORE
+ // program files are deleted. Abort rather than strand an active trusted CA.
+ const rippleMarker=path.join(home,'.claudebridge','ripple-lite','enabled.json');
+ if(fs.existsSync(rippleMarker)&&fs.existsSync(path.join(installPath,'integrations','ripple-lite','activate.js'))){
+  const r=spawnSync(nodeExecutable(),[path.join(installPath,'integrations','ripple-lite','activate.js'),'disable',installPath],{
+   stdio:'inherit',timeout:60000,windowsHide:false,shell:false
+  });
+  if(r.status!==0||r.error)throw Error('Ripple-lite cleanup could not restore previous Claude settings/certificates. Resolve it before uninstalling.');
+ }
  if(!fs.existsSync(installPath)){
   // No owned install: leave all other Claude configuration untouched.
   log(JSON.stringify({ok:true,installed:false,message:'No standalone ClaudeBridge installation found.'}));return;

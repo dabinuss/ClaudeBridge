@@ -52,6 +52,11 @@ jobs:
           node --check integrations/native-ui/renderer.js
           node --check integrations/native-ui/companion.js
           node --check integrations/native-ui/cdp.js
+          node --check integrations/ripple-lite/proxy.js
+          node --check integrations/ripple-lite/daemon.js
+          node --check integrations/ripple-lite/lifecycle.js
+          node --check integrations/ripple-lite/chat-rpc.js
+          node --check integrations/ripple-lite/html-inject.js
           node --check integrations/native-ui/setup-unix.js
           node --check maintenance/cleanup-unix.js
           node --check installer/setup.js
@@ -90,7 +95,7 @@ jobs:
       - name: Test one-file installer config registration
         run: node tests/standalone-setup.js
       - name: Bundle Codex CLI runtime
-        run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0
+        run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 node-forge@1.4.3
       - name: Install build-only dependencies
         run: npm install --prefix .builddeps --no-audit --no-fund --no-save @modelcontextprotocol/ext-apps@1.1.2 esbuild@0.25.12 @anthropic-ai/mcpb jsdom@26.1.0
       - name: Build bundled MCP Apps browser UI
@@ -104,6 +109,34 @@ jobs:
         run: node tests/native-picker.js
       - name: Test native CDP pipe companion
         run: node tests/native-cdp.js
+      - name: Test Ripple-lite bootstrap adapter
+        run: node tests/ripple-lite.js
+      - name: Test Ripple-lite CONNECT transport
+        run: node tests/ripple-transport.js
+      - name: Test Ripple-lite scoped bootstrap response transform
+        run: node tests/ripple-transform.js
+      - name: Test managed Claude Desktop proxy configuration
+        run: node tests/ripple-config.js
+      - name: Test scoped TLS certificates
+        run: node tests/ripple-certs.js
+      - name: Test HTTPS bootstrap interception
+        run: node tests/ripple-proxy.js
+      - name: Test user-scoped TLS trust lifecycle
+        run: node tests/ripple-trust.js
+      - name: Test Codex Messages adapter
+        run: node tests/ripple-codex.js
+      - name: Test routed HTTPS model request
+        run: node tests/ripple-routing.js
+      - name: Test normal Claude Chat HTML injection
+        run: node tests/ripple-html.js
+      - name: Test normal Chat menu RPC authorization
+        run: node tests/ripple-chat-rpc.js
+      - name: Test full HTTPS Chat menu flow
+        run: node tests/ripple-chat-e2e.js
+      - name: Test owned user autostart service
+        run: node tests/ripple-service.js
+      - name: Test actual Chat menu UI interaction
+        run: node tests/ripple-renderer.js
       - name: Check bundled Codex CLI
         shell: bash
         run: node vendor/node_modules/@openai/codex/bin/codex.js --version
@@ -281,7 +314,7 @@ jobs:
           else
             gh release create preview ClaudeBridge-Setup-Windows.cmd ClaudeBridge-Setup-macOS.command ClaudeBridge-Setup-Linux.run SHA256SUMS --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Lightweight SHA256-verified online installers for Windows, macOS and Linux. Node.js is downloaded from nodejs.org and Codex CLI from the official npm registry during setup. One-time ChatGPT sign-in required." --prerelease
           fi
-          gh release edit preview --title "ClaudeBridge 2.6 — Self-Contained Bridge Setup" --notes "Each installer ALREADY CONTAINS the complete ClaudeBridge server, desktop UI, native model-menu companion and uninstall scripts. Only external dependencies (private Node.js LTS runtime and pinned Codex CLI) download on demand from official providers. Re-running the same setup supports update and uninstall. Native Claude Desktop model-menu integration remains experimental."
+          gh release edit preview --title "ClaudeBridge 2.7 — Ripple-Lite Chat Menu Preview" --notes "The installer contains all ClaudeBridge-owned scripts, MCP server and UI, local Ripple-lite HTTPS proxy and Chat model-menu integration code. Only external Node.js LTS, Codex CLI and pinned node-forge are downloaded on demand. On first install, a user-level certificate trust prompt is required for the opt-in local proxy. Uses the normal Claude Desktop shortcut, no client patch or separate launcher. Automated cross-platform tests pass; actual signed-in Claude Desktop compatibility remains unverified. Codex direct model routing currently supports text responses only, not Claude Code tool-call parity."
           # Remove previously published downloader-only and large offline assets.
           for obsolete in \
             ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-Windows.cmd \

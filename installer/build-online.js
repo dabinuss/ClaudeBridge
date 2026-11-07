@@ -34,6 +34,12 @@ try{
   'integrations/native-ui/renderer.js','integrations/native-ui/setup-unix.js',
   'integrations/native-ui/install.ps1','integrations/native-ui/launcher.vbs',
   'installer/setup.js','installer/online-deps.js',
+  'integrations/ripple-lite/proxy.js','integrations/ripple-lite/daemon.js',
+  'integrations/ripple-lite/lifecycle.js','integrations/ripple-lite/activate.js',
+  'integrations/ripple-lite/certs.js','integrations/ripple-lite/trust.js',
+  'integrations/ripple-lite/service.js','integrations/ripple-lite/desktop-config.js',
+  'integrations/ripple-lite/chat-rpc.js','integrations/ripple-lite/html-inject.js',
+  'integrations/ripple-lite/codex-model.js',
   'claude-plugin/.claude-plugin/plugin.json','claude-plugin/skills/claudebridge/SKILL.md',
   'claude-plugin/commands/bridge.md','claude-plugin/commands/bridge-login.md','claude-plugin/commands/bridge-dual.md'
  ];
