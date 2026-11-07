@@ -1,25 +1,44 @@
-# ClaudeBridge Ripple-lite research and prototype
+# ClaudeBridge 2.7 — Ripple-Lite native Claude Desktop integration
 
-The module `integrations/ripple-lite/bootstrap.js` is an independent bootstrap-list adapter. `integrations/ripple-lite/transform.js` transforms only recognized bootstrap JSON responses (including gzip/br/deflate) and fails closed on unknown data. `integrations/ripple-lite/transport.js` provides a loopback-only, byte-transparent CONNECT proxy. Together these are testable components, **not yet a fully integrated TLS interception proxy, installer or model request router**.
+## User experience
 
-## Confirmed boundary
+Install ClaudeBridge once. The **original Claude Desktop application and original shortcut** are preserved. After one-time permission to trust the local ClaudeBridge CA (displayed with fingerprint during installation), a single user-scoped Node.js proxy starts at login. Claude Desktop's existing managed `egressProxyUrl` setting points at this loopback service. There is no new launcher, no `app.asar` patch and no alternative Claude client.
 
-ClaudeRipple injects additional model entries into `model_selector_config` in the `/edge-api/bootstrap` response and restricts injection to CLI-backed surfaces `code`, `ccd`, `ccr`, `cowork`. Ordinary Claude Chat does **not** use the same CLI routing path. This means advertising a fake model in Chat would not provide functional Codex chat integration.
+### Normal Chat tab
 
-Reference implementation studied: https://github.com/PBJ-2/clauderipple/blob/main/packages/router/src/picker.ts
+The proxy intercepts only the relevant `claude.ai` TLS session and adds a local first-party script to HTML pages where the CSP/nonce permits it. That script uses the existing `integrations/native-ui/renderer.js` DOM anchors to insert **Off / On demand / Fallback / Dual agents**, Codex status and login into the native model dropdown. The underlying Claude model selection and request routing remain unchanged. These controls update the same settings that ClaudeBridge MCP uses. They do not independently replace the server-side claude.ai model, intercept existing chats, or cause the model to delegate automatically without an MCP action.
 
-## Required to make this real
+When CSP or known DOM anchors do not match, injection is skipped (fail closed) rather than modifying unknown interface elements.
 
-1. Local HTTP CONNECT proxy bound to loopback, with strong TLS certificate validation and strictly scoped interception.
-2. Install a per-user CA only with explicit user consent and reliably remove it.
-3. Configure Claude Desktop's managed proxy settings for regular launches; preserve and restore existing values.
-4. Implement actual requests routing for each advertised model ID, including streaming, cancellation, and authentication.
-5. Connect routes to ClaudeBridge's existing Codex workers/MCP tools; test tool-call compatibility and project context.
-6. Test in a real signed-in Claude Desktop instance on each supported OS.
-7. Verify the **normal chat** model menu separately; this is not supported by this bootstrap prototype.
+### Code tab
 
-No patched Claude app, separate launcher, or globally installed Node is required by the intended architecture; a small local proxy process would be required while the feature is enabled.
+The proxy also adds a Codex-backed choice to CLI-backed bootstrap surfaces only when a signed-in Codex CLI is detected. A minimal Anthropic Messages API adapter can answer text requests through Codex CLI and emit text/SSE responses. **It rejects Claude Code tool schemas.** The existing ClaudeBridge MCP worker continues handling genuine code delegation and project memory.
 
-Run: `node tests/ripple-lite.js`, `node tests/ripple-transport.js`, and `node tests/ripple-transform.js`.
+## Files
 
-Do not ship a user-facing installer claiming native chat-picker or active model routing based solely on these adapter/transport tests. Actual integration needs authenticated end-to-end Desktop checks and independent assessment of certificate trust and rollback.
+- `integrations/ripple-lite/daemon.js` — the only additional resident process
+- `proxy.js` — loopback HTTP CONNECT with scoped TLS interception and authenticated local endpoints
+- `certs.js` — private CA and host certificates using Node native RSA + pinned node-forge
+- `trust.js` — explicit user-scoped certificate trust/untrust
+- `desktop-config.js` — managed Desktop config owner-tracked apply/restore
+- `service.js` — login autostart on Windows, macOS and Linux
+- `lifecycle.js` / `activate.js` — interactive install, restore, shutdown
+- `html-inject.js` / `chat-rpc.js` — guarded normal Chat menu insertion and limited setting actions
+- `bootstrap.js` / `transform.js` — CLI-surface model list additions
+- `codex-model.js` — limited text-only Codex model route
+
+## Security / rollback
+
+- Certificate is locally generated; private key and CA key reside in user-private directories (0600 where supported).
+- No system-wide proxy setting. Only Claude's managed config entry is changed, and its previous applied ID is preserved.
+- The local control endpoint requires a per-run 256-bit token; RPC additionally checks the first-party Origin and only allows four known actions.
+- No root CA is installed without interactive confirmation. Uninstall attempts proxy restoration and trust removal before deleting program files.
+- No automatic bypass of TLS verification for upstream HTTPS requests.
+- A proxy startup failure prevents applying the Desktop proxy setting.
+- Node, Codex and node-forge are downloaded only as external pinned dependencies. ClaudeBridge-owned scripts ship inside the installer.
+
+## Verification and limitations
+
+Automated tests cover TLS certificate creation, trust command construction, CONNECT, actual local TLS handshake, bootstrap rewriting, model text routing via a mocked Codex binary, first-party HTML script injection, DOM mode actions, settings RPC and reversible service/config changes.
+
+**A live signed-in Claude Desktop test is still required.** The first-party page structure, CSP and proprietary server behavior can change. The normal Chat menu modes control MCP delegation; they do not replace Claude's server-side inference. Code-tab direct Codex routing is text-only, not full tool-call parity. The feature must not be described as proven production-compatible before those integration tests.
