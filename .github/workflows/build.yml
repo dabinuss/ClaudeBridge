@@ -158,7 +158,7 @@ jobs:
       - name: Bundle ClaudeBridge Extension
         shell: pwsh
         run: |
-          Compress-Archive -Path manifest.json,server,vendor,ui,integrations,maintenance,installer -DestinationPath "ClaudeBridge-${{ matrix.label }}.zip" -Force
+          Compress-Archive -Path manifest.json,server,vendor,ui,integrations,maintenance,installer,claude-plugin -DestinationPath "ClaudeBridge-${{ matrix.label }}.zip" -Force
           Rename-Item "ClaudeBridge-${{ matrix.label }}.zip" "ClaudeBridge-${{ matrix.label }}.mcpb"
       - name: Verify complete Bridge is embedded and extracts offline
         shell: bash
