@@ -35,6 +35,11 @@ function auth(){
   try{
     const [exe,args]=codexCommand(bin,['login','status']);
     const r=spawnSync(exe,args,{encoding:'utf8',timeout:5000,windowsHide:true,maxBuffer:65536});
+    if(r.status===0){
+      for(const filename of ['login-device.log','login-process.json']){
+        try{fs.unlinkSync(path.join(store.home,filename));}catch(e){if(e.code!=='ENOENT')process.stderr.write('Login cleanup: '+e.message+'\n');}
+      }
+    }
     return {status:r.status===0?'signed_in':'not_signed_in'};
   }catch(e){return {status:'unknown',reason:e.message};}
 }
