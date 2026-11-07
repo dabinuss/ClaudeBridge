@@ -2,9 +2,33 @@
 
 **Use Claude Desktop and Codex CLI together through ordinary Claude conversations. No slash commands required.**
 
-![Version](https://img.shields.io/badge/version-2.4.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
+![Version](https://img.shields.io/badge/version-2.5.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
 
 > Preview: ClaudeBridge is an MCP Desktop Extension with an **optional Windows/macOS/Linux native model-menu companion**. The companion adds UI controls, not an alternative language model; it never intercepts network requests or replaces MCP. Authenticated Claude Desktop testing is still required.
+
+## One-file setup (recommended)
+
+**Download a single installer for your operating system and launch it.** It contains Codex CLI, the complete ClaudeBridge MCP server, the native model-menu companion, and a Node runtime. No separate .mcpb download or Node installation is needed.
+
+| Operating system | One file |
+| --- | --- |
+| Windows x64 | [ClaudeBridge-Setup-Windows.exe](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Setup-Windows.exe) |
+| macOS (matching runner architecture) | [ClaudeBridge-Setup-macOS.command](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Setup-macOS.command) |
+| Linux x64 | [ClaudeBridge-Setup-Linux.run](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Setup-Linux.run) |
+
+The installer automatically registers `claudebridge` in the **documented local Claude Desktop MCP configuration** and separately installs the optional native model-menu launcher. This does **not** register a Claude Desktop managed .mcpb extension: the MCP tools work through the local `mcpServers` configuration, not the Extensions list. Existing MCP servers and config keys are preserved.
+
+**Windows:** Double-click the .exe. If already installed, the same file offers **Update / Repair** and **Uninstall**.
+
+**macOS:** Open the downloaded .command file (you may need to approve execution in macOS security settings or give the file executable permission). Launch it again to choose **Update / Repair** or **Uninstall**.
+
+**Linux:** Execute the downloaded .run file (some file managers require granting execute permission first). Re-running it offers **Update / Repair** or **Uninstall**. This is a portable shell installer, not a .deb or an AppImage.
+
+After installing, **fully quit Claude Desktop**, reopen using the new **ClaudeBridge Claude** launcher if native integration succeeded, and sign in to Codex with your ChatGPT account once. The original Claude app and model choices are not modified. In restricted Claude Desktop packaging, native integration may fail while the MCP server is still correctly registered; the installer reports this rather than claiming full success.
+
+**Uninstall:** Reopen the same setup file, choose uninstall (Windows), or run the .command/.run file again and choose uninstall (macOS/Linux). The managed `claudebridge` MCP entry, installed program files and owned native launcher are removed. Your source-code projects and saved Bridge project memory are preserved by default; remove the latter only with explicit cleanup switches described below.
+
+The optional `.mcpb` packages remain available as an alternate manual installation path. Do not install both setup modes simultaneously unless you intentionally want two ClaudeBridge registrations.
 
 ## ClaudeBridge control panel inside Claude
 
