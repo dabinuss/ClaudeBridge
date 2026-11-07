@@ -54,6 +54,8 @@ jobs:
           node --check integrations/native-ui/cdp.js
           node --check integrations/native-ui/setup-unix.js
           node --check maintenance/cleanup-unix.js
+          node --check installer/setup.js
+          node --check installer/build-unix.js
       - name: Run legacy smoke tests
         run: node tests/smoke.js
       - name: Run v2 smoke tests
@@ -71,6 +73,8 @@ jobs:
           node tests/picker.js
       - name: Test Codex cancellation and child cleanup
         run: node tests/cancel.js
+      - name: Test one-file installer config registration
+        run: node tests/standalone-setup.js
       - name: Bundle Codex CLI runtime
         run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0
       - name: Install build-only dependencies
@@ -126,13 +130,40 @@ jobs:
       - name: Bundle ClaudeBridge Extension
         shell: pwsh
         run: |
-          Compress-Archive -Path manifest.json,server,vendor,ui,integrations,maintenance -DestinationPath "ClaudeBridge-${{ matrix.label }}.zip" -Force
+          Compress-Archive -Path manifest.json,server,vendor,ui,integrations,maintenance,installer -DestinationPath "ClaudeBridge-${{ matrix.label }}.zip" -Force
           Rename-Item "ClaudeBridge-${{ matrix.label }}.zip" "ClaudeBridge-${{ matrix.label }}.mcpb"
+      - name: Build Windows single-file Setup.exe
+        if: matrix.platform == 'win32'
+        shell: pwsh
+        run: |
+          dotnet publish installer/windows/ClaudeBridgeSetup.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -p:DebugType=none -p:PayloadPath="$((Get-Location).Path)/ClaudeBridge-Windows.mcpb" -o installer/windows/published
+          Copy-Item installer/windows/published/ClaudeBridge-Setup-Windows.exe . -Force
+      - name: Build macOS/Linux single-file installers
+        if: matrix.platform != 'win32'
+        run: node installer/build-unix.js
+      - name: Test complete all-in-one setup and uninstall
+        shell: bash
+        env:
+          CLAUDEBRIDGE_SETUP_TEST_HOME: ${{ runner.temp }}/claudebridge-setup-end-to-end
+          CLAUDEBRIDGE_SETUP_SKIP_NATIVE: '1'
+        run: |
+          if [ "${{ matrix.platform }}" = "win32" ]; then
+            ./ClaudeBridge-Setup-Windows.exe --quiet --install
+            ./ClaudeBridge-Setup-Windows.exe --quiet --uninstall
+          elif [ "${{ matrix.platform }}" = "darwin" ]; then
+            ./ClaudeBridge-Setup-macOS.command --install
+            ./ClaudeBridge-Setup-macOS.command --uninstall
+          else
+            ./ClaudeBridge-Setup-Linux.run --install
+            ./ClaudeBridge-Setup-Linux.run --uninstall
+          fi
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
           name: ClaudeBridge-${{ matrix.label }}
-          path: ClaudeBridge-${{ matrix.label }}.mcpb
+          path: |
+            ClaudeBridge-${{ matrix.label }}.mcpb
+            ClaudeBridge-Setup-*
           if-no-files-found: error
 
   preview-release:
@@ -172,7 +203,7 @@ jobs:
         run: gh release delete-asset preview ClaudeBridge.mcpb -y 2>/dev/null || true
       - name: Generate SHA-256 checksums
         if: steps.current.outputs.publish == 'true'
-        run: sha256sum ClaudeBridge-*.mcpb > SHA256SUMS
+        run: sha256sum ClaudeBridge-*.mcpb ClaudeBridge-Setup-* > SHA256SUMS
       - name: Publish preview installers
         if: steps.current.outputs.publish == 'true'
         env:
@@ -180,7 +211,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           if gh release view preview >/dev/null 2>&1; then
-            gh release upload preview ClaudeBridge-*.mcpb SHA256SUMS --clobber
+            gh release upload preview ClaudeBridge-*.mcpb ClaudeBridge-Setup-* SHA256SUMS --clobber
           else
-            gh release create preview ClaudeBridge-*.mcpb SHA256SUMS --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Experimental cross-platform desktop extensions. Codex CLI is bundled. One-time ChatGPT sign-in remains required." --prerelease
+            gh release create preview ClaudeBridge-*.mcpb ClaudeBridge-Setup-* SHA256SUMS --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Experimental cross-platform desktop extensions. Codex CLI is bundled. One-time ChatGPT sign-in remains required." --prerelease
           fi
