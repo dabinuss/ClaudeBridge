@@ -230,11 +230,13 @@ jobs:
         run: |
           node installer/build-online.js
           test -s ClaudeBridge-Online-Core.tar.gz
-          test "$(wc -c < ClaudeBridge-WebSetup-Windows.cmd)" -lt 1048576
-          test "$(wc -c < ClaudeBridge-WebSetup-macOS.command)" -lt 1048576
-          test "$(wc -c < ClaudeBridge-WebSetup-Linux.run)" -lt 1048576
-          bash -n ClaudeBridge-WebSetup-Linux.run
-          bash -n ClaudeBridge-WebSetup-macOS.command
+          test -s ClaudeBridge-Setup-Windows.cmd
+          test -s ClaudeBridge-Setup-macOS.command
+          test -s ClaudeBridge-Setup-Linux.run
+          bash -n installer/online-unix.sh
+          sh ./ClaudeBridge-Setup-Linux.run --verify-core
+          sh ./ClaudeBridge-Setup-macOS.command --verify-core
+          node -e 'const f=require("fs"),s=f.readFileSync("ClaudeBridge-Setup-Windows.cmd","utf8"),z=s.split("# CLAUDEBRIDGE CORE PAYLOAD"); if(z.length!==2||Buffer.from(z[1].trim(),"base64").length<10000)process.exit(1);'
       - name: Remove obsolete non-platform preview asset
         if: steps.current.outputs.publish == 'true'
         env:
@@ -243,7 +245,7 @@ jobs:
         run: gh release delete-asset preview ClaudeBridge.mcpb -y 2>/dev/null || true
       - name: Generate SHA-256 checksums
         if: steps.current.outputs.publish == 'true'
-        run: sha256sum ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-* > SHA256SUMS
+        run: sha256sum ClaudeBridge-Setup-Windows.cmd ClaudeBridge-Setup-macOS.command ClaudeBridge-Setup-Linux.run > SHA256SUMS
       - name: Publish preview installers
         if: steps.current.outputs.publish == 'true'
         env:
@@ -251,14 +253,16 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           if gh release view preview >/dev/null 2>&1; then
-            gh release upload preview ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-* SHA256SUMS --clobber
+            gh release upload preview ClaudeBridge-Setup-Windows.cmd ClaudeBridge-Setup-macOS.command ClaudeBridge-Setup-Linux.run SHA256SUMS --clobber
           else
-            gh release create preview ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-* SHA256SUMS --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Lightweight SHA256-verified online installers for Windows, macOS and Linux. Node.js is downloaded from nodejs.org and Codex CLI from the official npm registry during setup. One-time ChatGPT sign-in required." --prerelease
+            gh release create preview ClaudeBridge-Setup-Windows.cmd ClaudeBridge-Setup-macOS.command ClaudeBridge-Setup-Linux.run SHA256SUMS --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Lightweight SHA256-verified online installers for Windows, macOS and Linux. Node.js is downloaded from nodejs.org and Codex CLI from the official npm registry during setup. One-time ChatGPT sign-in required." --prerelease
           fi
-          gh release edit preview --title "ClaudeBridge 2.6 — Lightweight Online Setup" --notes "Download the small WebSetup file for Windows, macOS or Linux. The installer verifies the ClaudeBridge core SHA-256, downloads a private Node.js LTS runtime from nodejs.org with official checksum verification, then installs the pinned Codex CLI through the official npm registry. Re-running the same file offers update or uninstall. Signed-in real Claude Desktop native menu compatibility is experimental; no global Node installation is required."
-          # Offline packages stay available as CI artifacts, not duplicate preview downloads.
+          gh release edit preview --title "ClaudeBridge 2.6 — Self-Contained Bridge Setup" --notes "Each installer ALREADY CONTAINS the complete ClaudeBridge server, desktop UI, native model-menu companion and uninstall scripts. Only external dependencies (private Node.js LTS runtime and pinned Codex CLI) download on demand from official providers. Re-running the same setup supports update and uninstall. Native Claude Desktop model-menu integration remains experimental."
+          # Remove previously published downloader-only and large offline assets.
           for obsolete in \
+            ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-Windows.cmd \
+            ClaudeBridge-WebSetup-macOS.command ClaudeBridge-WebSetup-Linux.run \
             ClaudeBridge-Linux.mcpb ClaudeBridge-macOS.mcpb ClaudeBridge-Windows.mcpb \
-            ClaudeBridge-Setup-Linux.run ClaudeBridge-Setup-macOS.command ClaudeBridge-Setup-Windows.exe; do
+            ClaudeBridge-Setup-Windows.exe; do
             gh release delete-asset preview "$obsolete" -y 2>/dev/null || true
           done
