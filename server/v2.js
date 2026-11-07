@@ -8,6 +8,7 @@ const {spawn,spawnSync}=require('node:child_process');
 const store=require('./db');
 const memory=require('./memory');
 const plans=require('./plans');
+const settings=require('./settings');
 const {registerProject,chooseProject,currentProject,registeredProjects,openDb,addTask,patchTask,task,listTasks,message,messages}=store;
 const bundled=path.resolve(__dirname,'..','vendor','node_modules','@openai','codex','bin','codex.js');
 function codexBinary(){
@@ -52,8 +53,8 @@ function live(t,db){
   return t;
 }
 function diagnose(){
-  const p=currentProject(),bin=codexBinary(),login=auth();
-  return {ready:Boolean(bin)&&login.status==='signed_in'&&Boolean(p),codexInstalled:Boolean(bin),codexLogin:login.status,project:p||null,
+  const p=currentProject(),bin=codexBinary(),login=auth(),configuration=settings.read();
+  return {ready:Boolean(bin)&&login.status==='signed_in'&&Boolean(p),codexInstalled:Boolean(bin),codexLogin:login.status,mode:configuration.mode,configuration,project:p||null,
     nextStep:!p?'Connect a local project folder using bridge_project.':!bin?'Install the platform-specific extension package with bundled Codex CLI.':
       login.status!=='signed_in'?'One-time sign-in required. Ask Claude to start Codex sign-in or run codex login.':'Ask Claude to delegate a task to Codex.',
     interface:'Natural language in Claude Desktop; no slash commands are required.'};
@@ -84,9 +85,12 @@ function ensureWatchdog(p){
   child.unref();
 }
 function delegate(args){
+  const configuration=settings.read();
+  if(configuration.mode==='off')throw Error('ClaudeBridge is disabled. Switch to Manual, Fallback or Dual mode first.');
   const [p,db]=projectDb();
   try{
     const prompt=String(args.task||'').trim(),mode=args.mode||'review';
+    if(configuration.mode==='fallback' && args.trigger!=='limit_confirmed' && args.trigger!=='manual')throw Error('Fallback mode only accepts a confirmed limit event or explicit manual handoff. Claude Desktop has no reliable automatic quota event.');
     if(!prompt||prompt.length>30000)throw Error('Task must contain 1–30,000 characters');
     if(!['code','review'].includes(mode))throw Error('Mode must be code or review');
     if(!codexBinary())throw Error('Codex is missing. Install the platform-specific extension.');
@@ -152,6 +156,7 @@ function sendMessage(args){
   finally{db.close();}
 }
 function workingMemory(args={}){
+  if(!settings.read().memoryEnabled)throw Error('Automatic project memory is disabled in ClaudeBridge settings.');
   const [p,db]=projectDb();db.close();
   ensureMemoryMonitor(p);
   return args.timeline?{project:p.name,timeline:memory.timeline(p.path,args.limit||40)}:memory.digest(p.path);
@@ -218,8 +223,9 @@ function codexLogin(){
 const props=(o,required=[])=>({type:'object',properties:o,required});
 const specs=[
  {name:'bridge_health',description:'Check whether ClaudeBridge is installed, Codex is signed in, and a local project is selected. Use this automatically when user mentions Codex.',inputSchema:props({})},
+ {name:'bridge_settings',description:'Get or change ClaudeBridge mode: off, manual, fallback, dual. Fallback requires an explicit handoff or supported external trigger, not an invented quota event. Updates also affect optional desktop UI.',inputSchema:props({action:{type:'string',enum:['get','set']},mode:{type:'string',enum:['off','manual','fallback','dual']},memoryEnabled:{type:'boolean'},autoResume:{type:'boolean'}},['action'])},
  {name:'bridge_project',description:'Register and activate a local code project, switch projects, or list available projects. Ask user for a path only if none is known.',inputSchema:props({action:{type:'string',enum:['list','register','select']},path:{type:'string'},name:{type:'string'},id:{type:'string'}},['action'])},
- {name:'bridge_delegate',description:'Delegate work. For execution of an agreed plan, include plan_id so Codex receives its immutable approved revision. Never invent user approval.',inputSchema:props({task:{type:'string'},mode:{type:'string',enum:['code','review']},worktree:{type:'boolean'},previous:{type:'string'},plan_id:{type:'string'}},['task'])},
+ {name:'bridge_delegate',description:'Delegate work. For execution of an agreed plan, include plan_id so Codex receives its immutable approved revision. Never invent user approval.',inputSchema:props({task:{type:'string'},mode:{type:'string',enum:['code','review']},worktree:{type:'boolean'},previous:{type:'string'},plan_id:{type:'string'},trigger:{type:'string',enum:['manual','limit_confirmed']}},['task'])},
  {name:'bridge_plan',description:'Persist original user request and explicit plan, view history, propose revisions, or activate only after the user approves. When asked to create a plan, first save the proposed plan. Do not execute a draft without approval.',inputSchema:props({action:{type:'string',enum:['list','get','propose','approve','revise','complete']},plan_id:{type:'string'},title:{type:'string'},original_request:{type:'string'},plan:{type:'string'},reason:{type:'string'},user_confirmed:{type:'boolean'}},['action'])},
  {name:'bridge_status',description:'Report Codex progress, completion or an interrupted task. If no task ID, list recent tasks.',inputSchema:props({task_id:{type:'string'}})},
  {name:'bridge_context',description:'Read durable agent messages and recent tasks for the current project.',inputSchema:props({})},
@@ -234,6 +240,7 @@ const specs=[
 function call(name,args={}){
   switch(name){
     case 'bridge_health':return diagnose();
+    case 'bridge_settings':return args.action==='get'?settings.read():args.action==='set'?settings.write(args):(()=>{throw Error('Unknown settings action');})();
     case 'bridge_project':{
       if(args.action==='list')return registeredProjects();
       if(args.action==='register'){
@@ -263,8 +270,8 @@ async function handle(req){
   if(!req||req.jsonrpc!=='2.0'||!req.method||req.id===undefined)return;
   try{
     let result;
-    if(req.method==='initialize')result={protocolVersion:req.params?.protocolVersion||'2025-06-18',serverInfo:{name:'claudebridge',version:'2.0.0'},capabilities:{tools:{}},
-      instructions:'Use ClaudeBridge naturally. When a user asks for Codex help, check bridge_health, register or select the project if needed, consult bridge_memory for recent changes, save explicit user instructions and proposed plans with bridge_plan, and delegate work using an approved plan_id whenever applicable. Check bridge_context for messages. Tell the user when a Git worktree needs separate review/merge. Never claim to read hidden Claude threads or automatically detect Claude subscription quotas.'};
+    if(req.method==='initialize')result={protocolVersion:req.params?.protocolVersion||'2025-06-18',serverInfo:{name:'claudebridge',version:'2.2.0'},capabilities:{tools:{}},
+      instructions:'Use ClaudeBridge naturally. When a user asks for Codex help, check bridge_health and bridge_settings, register or select the project if needed, consult bridge_memory for recent changes, save explicit user instructions and proposed plans with bridge_plan, and delegate work using an approved plan_id whenever applicable. Check bridge_context for messages. Tell the user when a Git worktree needs separate review/merge. Never claim to read hidden Claude threads or automatically detect Claude subscription quotas.'};
     else if(req.method==='ping')result={};
     else if(req.method==='tools/list')result={tools:specs};
     else if(req.method==='tools/call'){
