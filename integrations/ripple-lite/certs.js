@@ -1,50 +1,72 @@
 'use strict';
-// User-scoped TLS identity for explicit, optional bootstrap interception.
-// Never adds a system-wide CA or silently modifies certificate trust.
+// Cross-platform certificate generation using Node's native RSA and a minimal
+// JS X.509 encoder. No OpenSSL executable or global install required.
 const fs=require('node:fs');
 const path=require('node:path');
 const crypto=require('node:crypto');
-const {execFileSync}=require('node:child_process');
-function run(cmd,args){return execFileSync(cmd,args,{stdio:['ignore','pipe','pipe'],timeout:20000,windowsHide:true});}
-function paths(dir){return Object.fromEntries(['ca.key','ca.pem','leaf.key','leaf.csr','leaf.pem','leaf.ext'].map(name=>[name.replace('.','_'),path.join(dir,name)]));}
-function createIdentity(dir,{execute=run,days=180}={}){
+const forge=require('../../vendor/node_modules/node-forge');
+function paths(dir){return Object.fromEntries(['ca.key','ca.pem','leaf.key','leaf.pem'].map(name=>[name.replace('.','_'),path.join(dir,name)]));}
+function createIdentity(dir,{days=180}={}){
  if(!path.isAbsolute(dir)||!Number.isInteger(days)||days<1||days>365)throw Error('Invalid certificate location or lifetime');
  fs.mkdirSync(dir,{recursive:true,mode:0o700});
  const p=paths(dir);
- if(fs.existsSync(p.ca_pem)&&fs.existsSync(p.leaf_pem)&&fs.existsSync(p.leaf_key)){
-  return {ca:p.ca_pem,cert:p.leaf_pem,key:p.leaf_key,fingerprint:new crypto.X509Certificate(fs.readFileSync(p.ca_pem)).fingerprint256};
+ if([p.ca_pem,p.ca_key,p.leaf_pem,p.leaf_key].every(x=>fs.existsSync(x))){
+  const ca=new crypto.X509Certificate(fs.readFileSync(p.ca_pem));
+  const leaf=new crypto.X509Certificate(fs.readFileSync(p.leaf_pem));
+  if(!ca.ca||!leaf.checkHost('claude.ai')||!leaf.checkHost('api.anthropic.com')||!leaf.verify(ca.publicKey))
+   throw Error('Stored TLS identity is invalid');
+  return {ca:p.ca_pem,cert:p.leaf_pem,key:p.leaf_key,fingerprint:ca.fingerprint256};
  }
  if(fs.readdirSync(dir).some(name=>name.startsWith('ca.')||name.startsWith('leaf.')))
   throw Error('Partial TLS identity found; refusing to replace the trusted root implicitly');
- const create=(args)=>execute('openssl',args);
  try{
-  create(['genrsa','-out',p.ca_key,'2048']);
-  create(['req','-new','-x509','-sha256','-days',String(days),'-key',p.ca_key,'-out',p.ca_pem,
-    '-subj','/CN=ClaudeBridge Local Root',
-    '-addext','basicConstraints=critical,CA:TRUE,pathlen:0',
-    '-addext','keyUsage=critical,keyCertSign,cRLSign']);
-  create(['genrsa','-out',p.leaf_key,'2048']);
-  create(['req','-new','-sha256','-key',p.leaf_key,'-out',p.leaf_csr,
-    '-subj','/CN=claude.ai']);
-  fs.writeFileSync(p.leaf_ext,[
-    'subjectAltName=DNS:claude.ai,DNS:*.claude.ai,DNS:api.anthropic.com',
-    'basicConstraints=critical,CA:FALSE',
-    'keyUsage=critical,digitalSignature,keyEncipherment',
-    'extendedKeyUsage=serverAuth'
-  ].join('\n')+'\n',{mode:0o600});
-  create(['x509','-req','-sha256','-days',String(days),'-in',p.leaf_csr,
-    '-CA',p.ca_pem,'-CAkey',p.ca_key,'-CAcreateserial','-out',p.leaf_pem,'-extfile',p.leaf_ext]);
-  fs.chmodSync(p.ca_key,0o600);fs.chmodSync(p.leaf_key,0o600);
-  fs.rmSync(p.leaf_csr,{force:true});fs.rmSync(p.leaf_ext,{force:true});
-  const leaf=new crypto.X509Certificate(fs.readFileSync(p.leaf_pem));
-  if(!leaf.checkHost('claude.ai')||leaf.ca||!leaf.verify(crypto.createPublicKey(fs.readFileSync(p.ca_pem))))
-   throw Error('Generated TLS certificate failed validation');
-  return {ca:p.ca_pem,cert:p.leaf_pem,key:p.leaf_key,fingerprint:new crypto.X509Certificate(fs.readFileSync(p.ca_pem)).fingerprint256};
- }catch(e){
-  // No half-generated identity should be installed accidentally.
-  for(const name of fs.readdirSync(dir))if(name.startsWith('ca.')||name.startsWith('leaf.'))fs.rmSync(path.join(dir,name),{force:true});
-  throw e;
+  function keys(){
+   const pair=crypto.generateKeyPairSync('rsa',{modulusLength:2048,publicExponent:65537,
+    publicKeyEncoding:{type:'pkcs1',format:'pem'},privateKeyEncoding:{type:'pkcs1',format:'pem'}});
+   return {private:pair.privateKey,public:forge.pki.publicKeyFromPem(pair.publicKey),
+     secret:forge.pki.privateKeyFromPem(pair.privateKey)};
+  }
+  const caKeys=keys(),leafKeys=keys();
+  const before=new Date(Date.now()-60000),after=new Date(Date.now()+days*86400000);
+  const attrs=[{name:'commonName',value:'ClaudeBridge Local Root'}];
+  const ca=forge.pki.createCertificate();
+  ca.publicKey=caKeys.public;ca.serialNumber=crypto.randomBytes(16).toString('hex');
+  ca.validity.notBefore=before;ca.validity.notAfter=after;
+  ca.setSubject(attrs);ca.setIssuer(attrs);
+  ca.setExtensions([
+   {name:'basicConstraints',cA:true,pathLenConstraint:0,critical:true},
+   {name:'keyUsage',keyCertSign:true,cRLSign:true,critical:true}
+  ]);
+  ca.sign(caKeys.secret,forge.md.sha256.create());
+  const leaf=forge.pki.createCertificate();
+  leaf.publicKey=leafKeys.public;leaf.serialNumber=crypto.randomBytes(16).toString('hex');
+  leaf.validity.notBefore=before;leaf.validity.notAfter=after;
+  leaf.setSubject([{name:'commonName',value:'claude.ai'}]);leaf.setIssuer(attrs);
+  leaf.setExtensions([
+   {name:'basicConstraints',cA:false,critical:true},
+   {name:'keyUsage',digitalSignature:true,keyEncipherment:true,critical:true},
+   {name:'extKeyUsage',serverAuth:true},
+   {name:'subjectAltName',altNames:[
+     {type:2,value:'claude.ai'},{type:2,value:'*.claude.ai'},
+     {type:2,value:'api.anthropic.com'}
+   ]}
+  ]);
+  leaf.sign(caKeys.secret,forge.md.sha256.create());
+  const written=[[p.ca_pem,forge.pki.certificateToPem(ca)],
+   [p.ca_key,caKeys.private],[p.leaf_pem,forge.pki.certificateToPem(leaf)],
+   [p.leaf_key,leafKeys.private]];
+  for(const [file,contents] of written)fs.writeFileSync(file,contents,{mode:0o600,flag:'wx'});
+  const nativeCa=new crypto.X509Certificate(fs.readFileSync(p.ca_pem));
+  const nativeLeaf=new crypto.X509Certificate(fs.readFileSync(p.leaf_pem));
+  if(!nativeCa.ca||nativeLeaf.ca||!nativeLeaf.verify(nativeCa.publicKey)||
+    !nativeLeaf.checkHost('claude.ai')||!nativeLeaf.checkHost('api.anthropic.com'))
+   throw Error('Generated certificate failed native verification');
+  return {ca:p.ca_pem,cert:p.leaf_pem,key:p.leaf_key,fingerprint:nativeCa.fingerprint256};
+ }catch(error){
+  for(const name of fs.readdirSync(dir))if(name.startsWith('ca.')||name.startsWith('leaf.'))
+   fs.rmSync(path.join(dir,name),{force:true});
+  throw error;
  }
 }
-function fingerprint(dir){const p=paths(dir);return new crypto.X509Certificate(fs.readFileSync(p.ca_pem)).fingerprint256;}
+function fingerprint(dir){return new crypto.X509Certificate(fs.readFileSync(paths(dir).ca_pem)).fingerprint256;}
 module.exports={createIdentity,fingerprint,paths};
