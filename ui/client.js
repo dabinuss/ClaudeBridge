@@ -20,11 +20,27 @@ async function refresh(){
   $('loginStatus').textContent=health.codexLogin==='signed_in'?'Codex already connected':health.codexLogin==='not_signed_in'?'Sign-in required':health.codexLogin;
   $('loginBtn').textContent=health.codexLogin==='signed_in'?'Codex already integrated':'Connect ChatGPT';
   $('loginBtn').disabled=health.codexLogin==='signed_in'||!health.codexInstalled;
+  const native=await call('bridge_native_picker',{action:'status'});
+  $('nativeStatus').textContent=!native.supported?'Windows only':native.installed?'Enabled via ClaudeBridge shortcut':'Not installed';
+  $('nativeInstallBtn').disabled=!native.supported||native.installed;
+  $('nativeRemoveBtn').disabled=!native.supported||!native.installed;
    }catch(e){show('Cannot refresh settings: '+e.message);}
 }
 $('mode').addEventListener('change',async e=>{try{await call('bridge_settings',{action:'set',mode:e.target.value});$('explanation').textContent=explanation[e.target.value];show('Mode saved.');}catch(err){show(err.message);}});
 $('memory').addEventListener('change',async e=>{try{await call('bridge_settings',{action:'set',memoryEnabled:e.target.checked});show('Working memory setting saved.');}catch(err){show(err.message);}});
 $('refreshBtn').addEventListener('click',refresh);
+$('nativeInstallBtn').addEventListener('click',async()=>{
+ try{
+  const result=await call('bridge_native_picker',{action:'install'});
+  await refresh();show(result.message||'Fully quit Claude Desktop and reopen using the ClaudeBridge Claude shortcut.');
+ }catch(e){show('Native picker installation failed: '+e.message);}
+});
+$('nativeRemoveBtn').addEventListener('click',async()=>{
+ try{
+  const result=await call('bridge_native_picker',{action:'remove'});
+  await refresh();show(result.message||'Native picker removed. The MCP bridge is unchanged.');
+ }catch(e){show('Removal failed: '+e.message);}
+});
 $('installBtn').addEventListener('click',()=>app.openLink({url:'https://github.com/dabinuss/ClaudeBridge/releases/tag/preview'}));
 $('loginBtn').addEventListener('click',async()=>{try{const r=await call('bridge_login',{});await refresh();show(r.instructions||r.message||r.nextStep||'Follow ChatGPT sign-in instructions.');}catch(e){show(e.message);}});
 app.ontoolresult=()=>refresh();
