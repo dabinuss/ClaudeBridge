@@ -7,6 +7,7 @@ const readline=require('node:readline');
 const {spawn,spawnSync}=require('node:child_process');
 const store=require('./db');
 const memory=require('./memory');
+const plans=require('./plans');
 const {registerProject,chooseProject,currentProject,registeredProjects,openDb,addTask,patchTask,task,listTasks,message,messages}=store;
 const bundled=path.resolve(__dirname,'..','vendor','node_modules','@openai','codex','bin','codex.js');
 function codexBinary(){
@@ -99,12 +100,15 @@ function delegate(args){
     }
     const id=crypto.randomUUID();
     const previous=args.previous||null;
+    const planId=args.plan_id||null;
+    if(planId&&plans.get(db,planId).status!=='active')throw Error('An approved plan is required for plan-bound execution.');
     if(previous){
       const old=task(db,previous);
       if(!old||!old.session_id)throw Error('Previous task has no resumable Codex session.');
       if(['queued','running'].includes(live(old,db).status))throw Error('Previous task is still active');
     }
     addTask(db,{id,mode,prompt,project_path:p.path,worktree:useWorktree,previous});
+    if(planId)plans.bind(db,id,planId);
     const worker=path.join(__dirname,'worker.js');
     const child=spawn(process.execPath,[worker,p.path,id,codexBinary()],{
       cwd:p.path,detached:true,windowsHide:true,stdio:'ignore',shell:false
@@ -128,6 +132,20 @@ function bridgeStatus(args){
     return {project:p,jobs:listTasks(db,30).map(t=>taskSummary(live(t,db)))};
   }finally{db.close();}
 }
+function managePlan(args){
+  const [,db]=projectDb();
+  try{
+    switch(args.action){
+      case 'list':return plans.list(db);
+      case 'get':return {plan:plans.get(db,args.plan_id),history:plans.history(db,args.plan_id)};
+      case 'propose':return plans.create(db,{title:args.title,request:args.original_request,specification:args.plan});
+      case 'approve':return plans.approve(db,args.plan_id,args.user_confirmed===true);
+      case 'revise':return plans.revise(db,args.plan_id,args.plan,args.reason);
+      case 'complete':return plans.complete(db,args.plan_id);
+      default:throw Error('Unknown plan action.');
+    }
+  }finally{db.close();}
+}
 function sendMessage(args){
   const [,db]=projectDb();
   try{return message(db,'claude',String(args.to||'codex'),args.message,args.task_id||null);}
@@ -140,7 +158,7 @@ function workingMemory(args={}){
 }
 function context(){
   const [p,db]=projectDb();
-  try{return {project:p,recentMessages:messages(db,30),recentTasks:listTasks(db,15).map(taskSummary)};}
+  try{return {project:p,recentMessages:messages(db,30),recentTasks:listTasks(db,15).map(taskSummary),plans:plans.list(db)};}
   finally{db.close();}
 }
 function stopTask(args){
@@ -201,7 +219,8 @@ const props=(o,required=[])=>({type:'object',properties:o,required});
 const specs=[
  {name:'bridge_health',description:'Check whether ClaudeBridge is installed, Codex is signed in, and a local project is selected. Use this automatically when user mentions Codex.',inputSchema:props({})},
  {name:'bridge_project',description:'Register and activate a local code project, switch projects, or list available projects. Ask user for a path only if none is known.',inputSchema:props({action:{type:'string',enum:['list','register','select']},path:{type:'string'},name:{type:'string'},id:{type:'string'}},['action'])},
- {name:'bridge_delegate',description:'Delegate coding or read-only review work to a detached Codex worker. Claude can work concurrently. Writing tasks default to a safe Git worktree; do not claim that a worktree is merged into the main project.',inputSchema:props({task:{type:'string'},mode:{type:'string',enum:['code','review']},worktree:{type:'boolean'},previous:{type:'string'}},['task'])},
+ {name:'bridge_delegate',description:'Delegate work. For execution of an agreed plan, include plan_id so Codex receives its immutable approved revision. Never invent user approval.',inputSchema:props({task:{type:'string'},mode:{type:'string',enum:['code','review']},worktree:{type:'boolean'},previous:{type:'string'},plan_id:{type:'string'}},['task'])},
+ {name:'bridge_plan',description:'Persist original user request and explicit plan, view history, propose revisions, or activate only after the user approves. When asked to create a plan, first save the proposed plan. Do not execute a draft without approval.',inputSchema:props({action:{type:'string',enum:['list','get','propose','approve','revise','complete']},plan_id:{type:'string'},title:{type:'string'},original_request:{type:'string'},plan:{type:'string'},reason:{type:'string'},user_confirmed:{type:'boolean'}},['action'])},
  {name:'bridge_status',description:'Report Codex progress, completion or an interrupted task. If no task ID, list recent tasks.',inputSchema:props({task_id:{type:'string'}})},
  {name:'bridge_context',description:'Read durable agent messages and recent tasks for the current project.',inputSchema:props({})},
  {name:'bridge_memory',description:'Read token-efficient automatically timestamped project timeline, file changes, Git changes, decisions and resumable tasks.',inputSchema:props({timeline:{type:'boolean'},limit:{type:'integer',minimum:1,maximum:100}})},
@@ -226,6 +245,7 @@ function call(name,args={}){
       throw Error('Unknown project action');
     }
     case 'bridge_delegate':return delegate(args);
+    case 'bridge_plan':return managePlan(args);
     case 'bridge_status':return bridgeStatus(args);
     case 'bridge_context':return context();
     case 'bridge_memory':return workingMemory(args);
@@ -244,7 +264,7 @@ async function handle(req){
   try{
     let result;
     if(req.method==='initialize')result={protocolVersion:req.params?.protocolVersion||'2025-06-18',serverInfo:{name:'claudebridge',version:'2.0.0'},capabilities:{tools:{}},
-      instructions:'Use ClaudeBridge naturally. When a user asks for Codex help, check bridge_health, register or select the project if needed, consult bridge_memory for recent changes, and delegate work. Check bridge_context for messages. Tell the user when a Git worktree needs separate review/merge. Never claim to read hidden Claude threads or automatically detect Claude subscription quotas.'};
+      instructions:'Use ClaudeBridge naturally. When a user asks for Codex help, check bridge_health, register or select the project if needed, consult bridge_memory for recent changes, save explicit user instructions and proposed plans with bridge_plan, and delegate work using an approved plan_id whenever applicable. Check bridge_context for messages. Tell the user when a Git worktree needs separate review/merge. Never claim to read hidden Claude threads or automatically detect Claude subscription quotas.'};
     else if(req.method==='ping')result={};
     else if(req.method==='tools/list')result={tools:specs};
     else if(req.method==='tools/call'){
