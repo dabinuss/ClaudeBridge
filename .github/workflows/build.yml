@@ -95,6 +95,20 @@ jobs:
       - name: Check bundled Codex CLI
         shell: bash
         run: node vendor/node_modules/@openai/codex/bin/codex.js --version
+      - name: Verify on-demand Codex installation into local runtime
+        shell: bash
+        env:
+          CLAUDEBRIDGE_SETUP_TEST_HOME: ${{ runner.temp }}/claudebridge-online-test
+          CLAUDEBRIDGE_SETUP_SKIP_NATIVE: '1'
+        run: |
+          export CLAUDEBRIDGE_NPM_CLI="$(npm root -g)/npm/bin/npm-cli.js"
+          if [ ! -f "$CLAUDEBRIDGE_NPM_CLI" ]; then
+            echo "Bundled npm CLI not found in CI environment" >&2
+            exit 1
+          fi
+          node installer/online-deps.js install
+          test -f "$CLAUDEBRIDGE_SETUP_TEST_HOME/Installed/installer/setup.js"
+          node installer/setup.js uninstall
       - name: Validate official MCPB manifest
         shell: bash
         run: npm exec --prefix .builddeps -- mcpb validate manifest.json
