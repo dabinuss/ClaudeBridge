@@ -159,6 +159,17 @@ jobs:
         shell: pwsh
         run: |
           Compress-Archive -Path manifest.json,server,vendor,ui,integrations,maintenance,installer,claude-plugin -DestinationPath "ClaudeBridge-${{ matrix.label }}.zip" -Force
+          # Compress-Archive silently skips hidden dot-directories; explicitly inject
+          # the required plugin manifest rather than shipping a broken Claude skill.
+          Add-Type -AssemblyName System.IO.Compression
+          $archivePath = (Resolve-Path "ClaudeBridge-${{ matrix.label }}.zip").Path
+          $zip = [System.IO.Compression.ZipFile]::Open($archivePath, [System.IO.Compression.ZipArchiveMode]::Update)
+          try {
+            $manifestPath = (Resolve-Path -LiteralPath "claude-plugin/.claude-plugin/plugin.json").Path
+            [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $manifestPath, "claude-plugin/.claude-plugin/plugin.json")
+          } finally {
+            $zip.Dispose()
+          }
           Rename-Item "ClaudeBridge-${{ matrix.label }}.zip" "ClaudeBridge-${{ matrix.label }}.mcpb"
       - name: Verify complete Bridge is embedded and extracts offline
         shell: bash
