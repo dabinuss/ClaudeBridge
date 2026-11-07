@@ -2,8 +2,8 @@
   "manifest_version": "0.3",
   "name": "claudebridge",
   "display_name": "ClaudeBridge",
-  "version": "2.4.0",
-  "description": "ClaudeBridge: original Claude model-menu controls on Windows, macOS and Linux with Codex and MCP.",
+  "version": "2.5.0",
+  "description": "ClaudeBridge: one-file setup on Windows macOS Linux, native Claude model-menu controls, Codex MCP and project memory.",
   "long_description": "Run ClaudeBridge in Claude Desktop on Windows, macOS or Linux. The optional native model-menu launcher supplies Off, Manual, Fallback and Dual controls while preserving MCP, Codex login and project memory.",
   "author": {
     "name": "ClaudeBridge contributors"
