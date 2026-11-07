@@ -39,9 +39,11 @@ function install(spec,{invoke=run,start=true}={}){
   fs.mkdirSync(path.dirname(spec.file),{recursive:true,mode:0o700});
   fs.writeFileSync(spec.file,spec.content,{mode:0o600,flag:'wx'});
  }
+ let registered=false;
  try{
   if(spec.platform==='win32'){
    invoke('reg.exe',['ADD',spec.location,'/v',spec.name,'/t','REG_SZ','/d',spec.command,'/f']);
+   registered=true;
   }else if(spec.platform==='darwin'){
    if(start)invoke('launchctl',['bootstrap','gui/'+process.getuid(),spec.file]);
   }else if(spec.platform==='linux'){
@@ -50,7 +52,10 @@ function install(spec,{invoke=run,start=true}={}){
   fs.writeFileSync(spec.marker,JSON.stringify({owner:LABEL,platform:spec.platform,
    file:spec.file||null,name:spec.name||null,command:spec.command||null}),{mode:0o600,flag:'wx'});
   return true;
- }catch(e){if(spec.file)fs.rmSync(spec.file,{force:true});throw e;}
+ }catch(e){
+  if(registered&&spec.platform==='win32')try{invoke('reg.exe',['DELETE',spec.location,'/v',spec.name,'/f']);}catch{}
+  if(spec.file)fs.rmSync(spec.file,{force:true});throw e;
+ }
 }
 function uninstall(spec,{invoke=run,stop=true}={}){
  let prior;
