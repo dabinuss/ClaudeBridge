@@ -91,14 +91,14 @@ if(!$ExtensionRoot -or !(Test-Path $ExtensionRoot)) {
   throw "An existing ClaudeBridge extension directory must be supplied."
 }
 $source = Join-Path $ExtensionRoot "integrations\native-ui"
-foreach($name in @("companion.js","renderer.js","cdp.js","node.exe")) {
+foreach($name in @("companion.js","renderer.js","cdp.js","launcher.vbs","node.exe")) {
   if(!(Test-Path (Join-Path $source $name))) { throw "Missing native launcher component: $name" }
 }
 $settings = Join-Path $ExtensionRoot "server\settings.js"
 if(!(Test-Path $settings)) { throw "ClaudeBridge settings module missing." }
 $claudeExe = Get-ClaudeExe
 New-Item -ItemType Directory -Path $base -Force | Out-Null
-foreach($name in @("companion.js","renderer.js","cdp.js","node.exe")) {
+foreach($name in @("companion.js","renderer.js","cdp.js","launcher.vbs","node.exe")) {
   Copy-Item -LiteralPath (Join-Path $source $name) -Destination (Join-Path $base $name) -Force
 }
 Copy-Item -LiteralPath $settings -Destination (Join-Path $base "settings.js") -Force
@@ -108,8 +108,8 @@ $wsh = New-Object -ComObject WScript.Shell
 New-Item -ItemType Directory -Path $menu,$desktopDir -Force | Out-Null
 foreach($location in @($link,$desktopLink)) {
   $obj = $wsh.CreateShortcut($location)
-  $obj.TargetPath = (Join-Path $base "node.exe")
-  $obj.Arguments = '"' + (Join-Path $base "companion.js") + '"'
+  $obj.TargetPath = (Join-Path $env:WINDIR "System32\wscript.exe")
+  $obj.Arguments = '"' + (Join-Path $base "launcher.vbs") + '"'
   $obj.WorkingDirectory = $base
   $obj.IconLocation = $claudeExe + ",0"
   $obj.Description = "Claude Desktop with ClaudeBridge native model-menu controls"
