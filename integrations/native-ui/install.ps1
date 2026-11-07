@@ -122,7 +122,7 @@ foreach($name in @("companion.js","renderer.js","cdp.js","launcher.vbs")) {
 Copy-Item -LiteralPath $settings -Destination (Join-Path $base "settings.js") -Force
 $nodePath = Join-Path $source "node.exe"
 if(!(Test-Path -LiteralPath $nodePath)){ throw "Bundled ClaudeBridge Node runtime is missing." }
-Set-Content -LiteralPath (Join-Path $base "node-path.txt") -Value $nodePath -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $base "node-path.txt") -Value $nodePath -Encoding Unicode
 $config = @{ claudeExe = $claudeExe; extensionRoot = (Resolve-Path $ExtensionRoot).Path }
 $config | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $base "native-ui.json") -Encoding UTF8
 $wsh = New-Object -ComObject WScript.Shell
