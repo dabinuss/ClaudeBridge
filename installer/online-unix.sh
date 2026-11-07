@@ -87,3 +87,4 @@ mkdir "$TMPROOT/runtime"
 tar -xzf "$TMPROOT/$NODE_ARCHIVE" -C "$TMPROOT/runtime" --strip-components=1
 export CLAUDEBRIDGE_NPM_CLI="$TMPROOT/runtime/lib/node_modules/npm/bin/npm-cli.js"
 "$TMPROOT/runtime/bin/node" "$TMPROOT/core/installer/online-deps.js" install
+exit "$?"
