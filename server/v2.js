@@ -9,6 +9,7 @@ const store=require('./db');
 const memory=require('./memory');
 const plans=require('./plans');
 const settings=require('./settings');
+const appUI=require('./app-ui');
 const {registerProject,chooseProject,currentProject,registeredProjects,openDb,addTask,patchTask,task,listTasks,message,messages}=store;
 const bundled=path.resolve(__dirname,'..','vendor','node_modules','@openai','codex','bin','codex.js');
 function codexBinary(){
@@ -224,6 +225,7 @@ const props=(o,required=[])=>({type:'object',properties:o,required});
 const specs=[
  {name:'bridge_health',description:'Check whether ClaudeBridge is installed, Codex is signed in, and a local project is selected. Use this automatically when user mentions Codex.',inputSchema:props({})},
  {name:'bridge_settings',description:'Get or change ClaudeBridge mode: off, manual, fallback, dual. Fallback requires an explicit handoff or supported external trigger, not an invented quota event. Updates also affect optional desktop UI.',inputSchema:props({action:{type:'string',enum:['get','set']},mode:{type:'string',enum:['off','manual','fallback','dual']},memoryEnabled:{type:'boolean'},autoResume:{type:'boolean'}},['action'])},
+ {name:'bridge_control_panel',description:'Open the interactive ClaudeBridge settings panel inside the existing Claude conversation, including Off/Manual/Fallback/Dual, memory, and Codex installation and login status.',inputSchema:props({}),_meta:{ui:{resourceUri:appUI.URI}}},
  {name:'bridge_project',description:'Register and activate a local code project, switch projects, or list available projects. Ask user for a path only if none is known.',inputSchema:props({action:{type:'string',enum:['list','register','select']},path:{type:'string'},name:{type:'string'},id:{type:'string'}},['action'])},
  {name:'bridge_delegate',description:'Delegate work. For execution of an agreed plan, include plan_id so Codex receives its immutable approved revision. Never invent user approval.',inputSchema:props({task:{type:'string'},mode:{type:'string',enum:['code','review']},worktree:{type:'boolean'},previous:{type:'string'},plan_id:{type:'string'},trigger:{type:'string',enum:['manual','limit_confirmed']}},['task'])},
  {name:'bridge_plan',description:'Persist original user request and explicit plan, view history, propose revisions, or activate only after the user approves. When asked to create a plan, first save the proposed plan. Do not execute a draft without approval.',inputSchema:props({action:{type:'string',enum:['list','get','propose','approve','revise','complete']},plan_id:{type:'string'},title:{type:'string'},original_request:{type:'string'},plan:{type:'string'},reason:{type:'string'},user_confirmed:{type:'boolean'}},['action'])},
@@ -240,6 +242,7 @@ const specs=[
 function call(name,args={}){
   switch(name){
     case 'bridge_health':return diagnose();
+    case 'bridge_control_panel':return {settings:settings.read(),health:diagnose(),panel:'ClaudeBridge Control Panel'};
     case 'bridge_settings':return args.action==='get'?settings.read():args.action==='set'?settings.write(args):(()=>{throw Error('Unknown settings action');})();
     case 'bridge_project':{
       if(args.action==='list')return registeredProjects();
@@ -270,10 +273,12 @@ async function handle(req){
   if(!req||req.jsonrpc!=='2.0'||!req.method||req.id===undefined)return;
   try{
     let result;
-    if(req.method==='initialize')result={protocolVersion:req.params?.protocolVersion||'2025-06-18',serverInfo:{name:'claudebridge',version:'2.2.0'},capabilities:{tools:{}},
-      instructions:'Use ClaudeBridge naturally. When a user asks for Codex help, check bridge_health and bridge_settings, register or select the project if needed, consult bridge_memory for recent changes, save explicit user instructions and proposed plans with bridge_plan, and delegate work using an approved plan_id whenever applicable. Check bridge_context for messages. Tell the user when a Git worktree needs separate review/merge. Never claim to read hidden Claude threads or automatically detect Claude subscription quotas.'};
+    if(req.method==='initialize')result={protocolVersion:req.params?.protocolVersion||'2025-06-18',serverInfo:{name:'claudebridge',version:'2.2.0'},capabilities:{tools:{},resources:{}},
+      instructions:'Use ClaudeBridge naturally. When a user asks for Codex help, check bridge_health and bridge_settings. When user wants UI controls, open bridge_control_panel, register or select the project if needed, consult bridge_memory for recent changes, save explicit user instructions and proposed plans with bridge_plan, and delegate work using an approved plan_id whenever applicable. Check bridge_context for messages. Tell the user when a Git worktree needs separate review/merge. Never claim to read hidden Claude threads or automatically detect Claude subscription quotas.'};
     else if(req.method==='ping')result={};
     else if(req.method==='tools/list')result={tools:specs};
+    else if(req.method==='resources/list')result=appUI.listResources();
+    else if(req.method==='resources/read')result=appUI.readResource(req.params?.uri);
     else if(req.method==='tools/call'){
       try{result={content:[{type:'text',text:JSON.stringify(call(req.params?.name,req.params?.arguments||{}),null,2)}]};}
       catch(e){result={isError:true,content:[{type:'text',text:String(e.message)}]};}
