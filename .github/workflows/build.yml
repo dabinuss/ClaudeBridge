@@ -122,6 +122,14 @@ jobs:
         run: node tests/ripple-codex.js
       - name: Test routed HTTPS model request
         run: node tests/ripple-routing.js
+      - name: Test normal Claude Chat HTML injection
+        run: node tests/ripple-html.js
+      - name: Test normal Chat menu RPC authorization
+        run: node tests/ripple-chat-rpc.js
+      - name: Test full HTTPS Chat menu flow
+        run: node tests/ripple-chat-e2e.js
+      - name: Test owned user autostart service
+        run: node tests/ripple-service.js
       - name: Check bundled Codex CLI
         shell: bash
         run: node vendor/node_modules/@openai/codex/bin/codex.js --version
