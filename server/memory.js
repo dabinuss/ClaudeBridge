@@ -65,7 +65,8 @@ function capture(projectPath){
       if(git.head&&git.head!==prev.git.head)record(db,'commit','Git HEAD changed: '+String(prev.git.head||'none')+' → '+git.head);
       if(git.branch!==prev.git.branch)record(db,'branch','Git branch: '+String(prev.git.branch||'none')+' → '+String(git.branch||'none'));
     }else record(db,'baseline','Project baseline created: '+files.length+' tracked source files');
-    db.prepare("INSERT INTO memory_meta(key,value) VALUES('snapshot',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify({files,git}));
+    if(!prevRaw||added.length||changed.length||deleted.length||git.head!==prev.git.head||git.branch!==prev.git.branch||git.status!==prev.git.status)
+      db.prepare("INSERT INTO memory_meta(key,value) VALUES('snapshot',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify({files,git}));
     return {files:files.length,added:added.length,changed:changed.length,deleted:deleted.length,head:git.head,branch:git.branch};
   }finally{db.close();}
 }
