@@ -42,20 +42,28 @@ try{
  const core=path.join(root,'ClaudeBridge-Online-Core.tar.gz');
  const t=spawnSync('tar',['-czf',core,...included],{cwd:work,encoding:'utf8',timeout:45000});
  if(t.status!==0)throw Error('Core packaging failed: '+t.stderr);
- const digest=crypto.createHash('sha256').update(fs.readFileSync(core)).digest('hex');
- const templates=[
-  ['online-unix.sh','ClaudeBridge-WebSetup-macOS.command'],
-  ['online-unix.sh','ClaudeBridge-WebSetup-Linux.run'],
-  ['online-windows.cmd','ClaudeBridge-WebSetup-Windows.cmd']
- ];
- for(const [input,output] of templates){
-  const template=fs.readFileSync(path.join(root,'installer',input),'utf8');
-  if(!template.includes('__CORE_SHA256__'))throw Error('Missing checksum placeholder '+input);
-  const destination=path.join(root,output);
-  fs.writeFileSync(destination,template.replaceAll('__CORE_SHA256__',digest),{mode:0o755});
-  if(output.endsWith('.run')||output.endsWith('.command'))fs.chmodSync(destination,0o755);
-  console.log(output+': '+fs.statSync(destination).size+' bytes');
+ const archive=fs.readFileSync(core);
+ const digest=crypto.createHash('sha256').update(archive).digest('hex');
+ const unixTemplate=fs.readFileSync(path.join(root,'installer','online-unix.sh'),'utf8');
+ if(!unixTemplate.endsWith('\n')||!unixTemplate.includes('__PAYLOAD_LINE__'))
+  throw Error('Unix installer template must end in a newline and expose its payload offset');
+ const payloadLine=unixTemplate.split('\n').length;
+ const unixScript=unixTemplate.replace('__PAYLOAD_LINE__',String(payloadLine));
+ for(const [label,extension] of [['macOS','.command'],['Linux','.run']]){
+  const output=path.join(root,'ClaudeBridge-Setup-'+label+extension);
+  // POSIX shell header and full compressed Bridge content share a single file.
+  fs.writeFileSync(output,Buffer.concat([Buffer.from(unixScript,'utf8'),archive]),{mode:0o755});
+  fs.chmodSync(output,0o755);
+  console.log(path.basename(output)+': '+fs.statSync(output).size+' bytes');
  }
- console.log('ClaudeBridge core: '+fs.statSync(core).size+' bytes SHA-256 '+digest);
+ const winTemplate=fs.readFileSync(path.join(root,'installer','online-windows.cmd'),'utf8');
+ if(!winTemplate.includes('# CLAUDEBRIDGE POWERSHELL START'))
+  throw Error('Windows embedded installer is missing the PowerShell delimiter');
+ const windowsFile=path.join(root,'ClaudeBridge-Setup-Windows.cmd');
+ // Embed the same complete core as base64. The extracted bytes are never downloaded.
+ const base64=archive.toString('base64').match(/.{1,76}/g).join('\r\n');
+ fs.writeFileSync(windowsFile,winTemplate.trimEnd()+'\r\n# CLAUDEBRIDGE CORE PAYLOAD\r\n'+base64+'\r\n','utf8');
+ console.log(path.basename(windowsFile)+': '+fs.statSync(windowsFile).size+' bytes');
+ console.log('Embedded ClaudeBridge core: '+archive.length+' bytes SHA-256 '+digest);
 }catch(e){process.stderr.write(e.stack+'\n');process.exitCode=1;}
 finally{fs.rmSync(work,{recursive:true,force:true,maxRetries:5,retryDelay:100});}
