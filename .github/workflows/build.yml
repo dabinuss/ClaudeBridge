@@ -41,12 +41,19 @@ jobs:
           node --check server/worker.js
           node --check server/agent-mcp.js
           node --check server/watchdog.js
+          node --check server/memory.js
+          node --check server/memory-monitor.js
+          node --check server/plans.js
       - name: Run legacy smoke tests
         run: node tests/smoke.js
       - name: Run v2 smoke tests
         run: node tests/v2.js
       - name: Test two-agent mailbox
         run: node tests/mailbox.js
+      - name: Test token-free memory
+        run: node tests/memory.js
+      - name: Test plan continuity
+        run: node tests/plans.js
       - name: Bundle Codex CLI for this platform
         run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0
       - name: Check bundled Codex CLI
