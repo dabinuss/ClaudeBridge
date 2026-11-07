@@ -111,11 +111,12 @@ function startTask(prompt, mode, previous=null, customId=null) {
   const logFile=path.join(meta,'task-'+id+'.jsonl');
   const rl=readline.createInterface({input:child.stdout});
   let successful=false,hadFailure=false,stderr='';
+  let lastActivityWrite=0;
   rl.on('line',line=>{
     appendLimited(logFile,line.slice(0,256*1024)+'\n');let e;try{e=JSON.parse(line);}catch{return;}
     if(e.type==='thread.started' && typeof e.thread_id==='string' && /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(e.thread_id)) update(id,{sessionId:e.thread_id});
     if(e.type==='item.completed' && e.item?.type==='agent_message') update(id,{lastMessage:String(e.item.text||'').slice(-12000)});
-    if(e.type==='item.started' && e.item?.type==='command_execution') update(id,{activity:String(e.item.command||'').slice(0,400)});
+    if(e.type==='item.started' && e.item?.type==='command_execution' && Date.now()-lastActivityWrite>1500){lastActivityWrite=Date.now();update(id,{activity:String(e.item.command||'').slice(0,400)});}
     if(e.type==='turn.completed'){successful=true;update(id,{usage:e.usage||null});}
     if(e.type==='turn.failed'||e.type==='error'){hadFailure=true;update(id,{error:String(e.error?.message||e.message||'Codex reported an error').slice(0,1000)});}
   });
