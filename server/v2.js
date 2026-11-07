@@ -6,6 +6,7 @@ const os=require('node:os');
 const readline=require('node:readline');
 const {spawn,spawnSync}=require('node:child_process');
 const store=require('./db');
+const activeSettings=()=>settings.read(currentProject()?.id||null);
 const memory=require('./memory');
 const plans=require('./plans');
 const settings=require('./settings');
@@ -54,7 +55,7 @@ function live(t,db){
   return t;
 }
 function diagnose(){
-  const p=currentProject(),bin=codexBinary(),login=auth(),configuration=settings.read();
+  const p=currentProject(),bin=codexBinary(),login=auth(),configuration=activeSettings();
   return {ready:Boolean(bin)&&login.status==='signed_in'&&Boolean(p),codexInstalled:Boolean(bin),codexLogin:login.status,mode:configuration.mode,configuration,project:p||null,
     nextStep:!p?'Connect a local project folder using bridge_project.':!bin?'Install the platform-specific extension package with bundled Codex CLI.':
       login.status!=='signed_in'?'One-time sign-in required. Ask Claude to start Codex sign-in or run codex login.':'Ask Claude to delegate a task to Codex.',
@@ -86,7 +87,7 @@ function ensureWatchdog(p){
   child.unref();
 }
 function delegate(args){
-  const configuration=settings.read();
+  const configuration=activeSettings();
   if(configuration.mode==='off')throw Error('ClaudeBridge is disabled. Switch to Manual, Fallback or Dual mode first.');
   const [p,db]=projectDb();
   try{
@@ -157,7 +158,7 @@ function sendMessage(args){
   finally{db.close();}
 }
 function workingMemory(args={}){
-  if(!settings.read().memoryEnabled)throw Error('Automatic project memory is disabled in ClaudeBridge settings.');
+  if(!activeSettings().memoryEnabled)throw Error('Automatic project memory is disabled in ClaudeBridge settings.');
   const [p,db]=projectDb();db.close();
   ensureMemoryMonitor(p);
   return args.timeline?{project:p.name,timeline:memory.timeline(p.path,args.limit||40)}:memory.digest(p.path);
@@ -242,8 +243,8 @@ const specs=[
 function call(name,args={}){
   switch(name){
     case 'bridge_health':return diagnose();
-    case 'bridge_control_panel':return {settings:settings.read(),health:diagnose(),panel:'ClaudeBridge Control Panel'};
-    case 'bridge_settings':return args.action==='get'?settings.read():args.action==='set'?settings.write(args):(()=>{throw Error('Unknown settings action');})();
+    case 'bridge_control_panel':return {settings:activeSettings(),health:diagnose(),panel:'ClaudeBridge Control Panel'};
+    case 'bridge_settings':return args.action==='get'?activeSettings():args.action==='set'?settings.write(args,currentProject()?.id||null):(()=>{throw Error('Unknown settings action');})();
     case 'bridge_project':{
       if(args.action==='list')return registeredProjects();
       if(args.action==='register'){
