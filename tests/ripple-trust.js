@@ -4,7 +4,6 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {execFileSync}=require('node:child_process');
 const {createIdentity}=require('../integrations/ripple-lite/certs');
 const {command,apply}=require('../integrations/ripple-lite/trust');
-try{execFileSync('openssl',['version'],{stdio:'ignore'});}catch{console.log('SKIP: OpenSSL unavailable');process.exit(0);}
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'cb-trust-'));
 try{
  const ca=createIdentity(dir).ca;
