@@ -52,6 +52,11 @@ jobs:
           node --check integrations/native-ui/renderer.js
           node --check integrations/native-ui/companion.js
           node --check integrations/native-ui/cdp.js
+          node --check integrations/ripple-lite/proxy.js
+          node --check integrations/ripple-lite/daemon.js
+          node --check integrations/ripple-lite/lifecycle.js
+          node --check integrations/ripple-lite/chat-rpc.js
+          node --check integrations/ripple-lite/html-inject.js
           node --check integrations/native-ui/setup-unix.js
           node --check maintenance/cleanup-unix.js
           node --check installer/setup.js
@@ -130,6 +135,8 @@ jobs:
         run: node tests/ripple-chat-e2e.js
       - name: Test owned user autostart service
         run: node tests/ripple-service.js
+      - name: Test actual Chat menu UI interaction
+        run: node tests/ripple-renderer.js
       - name: Check bundled Codex CLI
         shell: bash
         run: node vendor/node_modules/@openai/codex/bin/codex.js --version
