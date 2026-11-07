@@ -65,7 +65,7 @@ jobs:
           node tests/settings.js
           node tests/picker.js
       - name: Bundle Codex CLI and MCP Apps UI runtime
-        run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 @modelcontextprotocol/ext-apps@1.1.2 esbuild@0.25.12
+        run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 @modelcontextprotocol/ext-apps@1.1.2 esbuild@0.25.12 @anthropic-ai/mcpb
       - name: Build bundled MCP Apps browser UI
         shell: bash
         run: |
@@ -76,6 +76,9 @@ jobs:
       - name: Check bundled Codex CLI
         shell: bash
         run: node vendor/node_modules/@openai/codex/bin/codex.js --version
+      - name: Validate official MCPB manifest
+        shell: bash
+        run: npm exec --prefix vendor -- mcpb validate manifest.json
       - name: Set manifest platform
         shell: bash
         run: |
@@ -102,6 +105,16 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Refuse stale preview builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          HEAD=$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)
+          if [ "$HEAD" != "$GITHUB_SHA" ]; then
+            echo "Skipping outdated preview build."
+            exit 1
+          fi
       - name: Download all platform packages
         uses: actions/download-artifact@v4
         with:
