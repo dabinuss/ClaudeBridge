@@ -63,6 +63,7 @@ function diagnose(){
     interface:'Natural language in Claude Desktop; no slash commands are required.'};
 }
 function ensureMemoryMonitor(p){
+  if(!settings.read(p.id).memoryEnabled)return;
   const file=path.join(p.path,'.agent-bridge','memory-monitor.pid');
   if(fs.existsSync(file)){
     const pid=Number(fs.readFileSync(file,'utf8').trim());
@@ -249,7 +250,13 @@ function call(name,args={}){
   switch(name){
     case 'bridge_health':return diagnose();
     case 'bridge_control_panel':return {settings:activeSettings(),health:diagnose(),panel:'ClaudeBridge Control Panel'};
-    case 'bridge_settings':return args.action==='get'?activeSettings():args.action==='set'?settings.write(args,currentProject()?.id||null):(()=>{throw Error('Unknown settings action');})();
+    case 'bridge_settings': {
+      if(args.action==='get')return activeSettings();
+      if(args.action!=='set')throw Error('Unknown settings action');
+      const updated=settings.write(args,currentProject()?.id||null);
+      if(updated.memoryEnabled&&currentProject())ensureMemoryMonitor(currentProject());
+      return updated;
+    }
     case 'bridge_project':{
       if(args.action==='list')return registeredProjects();
       if(args.action==='register'){
