@@ -27,7 +27,8 @@ function request(method,params={}){
  assert.equal(data.contents[0].mimeType,'text/html;profile=mcp-app');
  assert.match(data.contents[0].text,/ClaudeBridge/);
  assert.match(data.contents[0].text,/Dual agents/);
- assert.match(data.contents[0].text,/globalThis\.ExtApps=/,'MCP Apps browser runtime must be bundled for an interactive panel');
+ assert(!data.contents[0].text.includes('/*__CLAUDEBRIDGE_APP_BUNDLE__*/'),'UI must contain the real compiled runtime');
+ assert.match(data.contents[0].text,/ClaudeBridge Settings/,'Compiled MCP UI must include app initialization');
  const set=await request('tools/call',{name:'bridge_settings',arguments:{action:'set',mode:'dual'}});
  assert.equal(JSON.parse(set.content[0].text).mode,'dual');
  const get=await request('tools/call',{name:'bridge_settings',arguments:{action:'get'}});
