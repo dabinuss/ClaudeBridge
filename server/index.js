@@ -16,6 +16,7 @@ const MAX_LOG_BYTES = 8 * 1024 * 1024;
 const MAX_NOTES_BYTES = 256 * 1024;
 const MAX_TASKS = 1000;
 const MAX_INPUT_BYTES = 1024 * 1024;
+const MAX_ACTIVITY_BYTES = 8 * 1024 * 1024;
 let codexCache = null;
 const now = () => new Date().toISOString();
 function safeWrite(file, data) {
@@ -50,7 +51,8 @@ function save(value) {
   safeWrite(tasksFile,JSON.stringify(value,null,2)+'\n');
 }
 function event(kind, taskId, detail) {
-  fs.appendFileSync(activityFile, JSON.stringify({at:now(), kind, taskId, detail:String(detail||'').slice(0,1000)})+'\n');
+  const message=JSON.stringify({at:now(),kind,taskId,detail:String(detail||'').slice(0,1000)})+'\n';
+  appendLimited(activityFile,message);
 }
 function update(id, patch) {const all=load(); if(!all[id])return; Object.assign(all[id],patch,{updated:now()}); save(all); return all[id];}
 function checkTaskId(id) {if(!/^[0-9a-f-]{36}$/i.test(String(id||'')))throw Error('Invalid task ID');}
@@ -111,7 +113,7 @@ function startTask(prompt, mode, previous=null, customId=null) {
   let successful=false,hadFailure=false,stderr='';
   rl.on('line',line=>{
     appendLimited(logFile,line.slice(0,256*1024)+'\n');let e;try{e=JSON.parse(line);}catch{return;}
-    if(e.type==='thread.started' && e.thread_id) update(id,{sessionId:e.thread_id});
+    if(e.type==='thread.started' && typeof e.thread_id==='string' && /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(e.thread_id)) update(id,{sessionId:e.thread_id});
     if(e.type==='item.completed' && e.item?.type==='agent_message') update(id,{lastMessage:String(e.item.text||'').slice(-12000)});
     if(e.type==='item.started' && e.item?.type==='command_execution') update(id,{activity:String(e.item.command||'').slice(0,400)});
     if(e.type==='turn.completed'){successful=true;update(id,{usage:e.usage||null});}
@@ -148,7 +150,12 @@ const specs=[
 ];
 function call(name,args={}){
   switch(name){
-    case 'bridge_health': {const bin=cliLocation();return {project:root, codexBinary:bin||null,codexAvailable:Boolean(bin), bridgeVersion:'1.0.0',runningTasks:running.size, dataDirectory:meta};}
+    case 'bridge_health': {
+      const bin=cliLocation();
+      return {ready:Boolean(bin),project:root,codexAvailable:Boolean(bin),codexBinary:bin||null,
+        bridgeVersion:'1.0.1',runningTasks:running.size,dataDirectory:meta,
+        nextStep:bin?'Ask Claude to delegate a read-only review to Codex.':'Install Codex CLI with npm install -g @openai/codex, run codex login, then restart Claude Desktop.'};
+    }
     case 'bridge_delegate': return startTask(args.task,args.mode||'code');
     case 'bridge_status':return status(args.task_id,Boolean(args.include_events));
     case 'bridge_cancel': {const t=getTask(args.task_id);const entry=running.get(t.id);if(!entry)return {id:t.id,status:t.status,message:'Task is not running in this bridge process.'};update(t.id,{status:'cancelled',error:'Cancelled by user/Claude'});entry.child.kill();if(process.platform==='win32'&&entry.child.pid){spawn('taskkill',['/pid',String(entry.child.pid),'/t','/f'],{windowsHide:true});}return {id:t.id,status:'cancelled'};}
@@ -166,7 +173,7 @@ async function handle(req){
   if(req.id===undefined)return;
   try {
     let result;
-    if(req.method==='initialize')result={protocolVersion:req.params?.protocolVersion||'2025-06-18',capabilities:{tools:{}},serverInfo:{name:'claudebridge',version:'1.0.0'},instructions:'Call bridge_health, then bridge_context. Delegate independent work with bridge_delegate and poll bridge_status. Save Claude decisions using bridge_checkpoint. Do not assume you can detect Claude subscription limits or read other Claude threads.'};
+    if(req.method==='initialize')result={protocolVersion:req.params?.protocolVersion||'2025-06-18',capabilities:{tools:{}},serverInfo:{name:'claudebridge',version:'1.0.1'},instructions:'ClaudeBridge is ready. When the user asks to collaborate with Codex, first call bridge_health and bridge_context. Then delegate with bridge_delegate, poll with bridge_status, and summarize completed results in plain language. Use review for read-only checks, code for modifications. Save handoffs with bridge_checkpoint. Do not claim subscription-limit detection or access to other Claude threads.'};
     else if(req.method==='ping')result={};
     else if(req.method==='tools/list')result={tools:specs};
     else if(req.method==='tools/call'){
