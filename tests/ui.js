@@ -19,6 +19,14 @@ function request(method,params={}){
 (async()=>{
  const init=await request('initialize');
  assert(init.capabilities.resources);
+ assert(init.capabilities.prompts,'MCP prompts must be discoverable');
+ const prompts=await request('prompts/list');
+ assert(prompts.prompts.some(x=>x.name==='claudebridge-settings'));
+ assert(prompts.prompts.some(x=>x.name==='claudebridge-dual'));
+ const settingsPrompt=await request('prompts/get',{name:'claudebridge-settings'});
+ assert.match(settingsPrompt.messages[0].content.text,/bridge_health/);
+ const dualPrompt=await request('prompts/get',{name:'claudebridge-dual',arguments:{task:'Review this worktree'}});
+ assert.match(dualPrompt.messages[0].content.text,/Review this worktree/);
  const list=await request('tools/list');
  assert(list.tools.some(x=>x.name==='bridge_control_panel'&&x._meta?.ui?.resourceUri));
  const resources=await request('resources/list');
