@@ -38,6 +38,14 @@ async function enable({installed,consent=false}={}){
  if(!path.isAbsolute(installed))throw Error('Installed directory must be absolute');
  const {node,script}=paths(installed);
  const dir=root();
+ const enabledFile=path.join(dir,'enabled.json');
+ if(fs.existsSync(enabledFile)){
+  const previous=JSON.parse(fs.readFileSync(enabledFile,'utf8'));
+  if(previous.installed!==installed)throw Error('A different ClaudeBridge installation already owns the proxy');
+  if(await isAlive())return {enabled:true,alreadyEnabled:true,port:PORT,
+   fingerprint:previous.fingerprint,restartClaude:false};
+  throw Error('An existing proxy installation is not healthy; disable and repair it before reinstalling');
+ }
  const identity=createIdentity(path.join(dir,'certs'));
  const spec=service.serviceSpec({exe:node,script});
  let trusted=false,started=false,configured=false;
