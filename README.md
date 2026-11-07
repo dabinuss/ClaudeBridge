@@ -2,13 +2,13 @@
 
 **Use Claude Desktop and Codex CLI together through ordinary Claude conversations. No slash commands required.**
 
-![Version](https://img.shields.io/badge/version-2.3.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
+![Version](https://img.shields.io/badge/version-2.4.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
 
-> Preview: ClaudeBridge is an MCP Desktop Extension with an **optional Windows native model-menu companion**. The companion adds UI controls, not an alternative language model; it never intercepts network requests or replaces MCP. Authenticated Claude Desktop testing is still required.
+> Preview: ClaudeBridge is an MCP Desktop Extension with an **optional Windows/macOS/Linux native model-menu companion**. The companion adds UI controls, not an alternative language model; it never intercepts network requests or replaces MCP. Authenticated Claude Desktop testing is still required.
 
 ## ClaudeBridge control panel inside Claude
 
-ClaudeBridge 2.3.0 includes an interactive **MCP Apps** control panel without replacing the MCP bridge. In your Claude conversation, ask:
+ClaudeBridge 2.4.0 includes an interactive **MCP Apps** control panel without replacing the MCP bridge. In your Claude conversation, ask:
 
 > **Open ClaudeBridge settings.**
 
@@ -23,25 +23,29 @@ When your Claude Desktop build supports local MCP Apps rendering, the panel appe
 
 The same settings are available to Claude as MCP tools through normal-language requests. No slash commands are needed.
 
-## Native model-picker controls (Windows preview)
+## Native model-picker controls (Windows, macOS and Linux preview)
 
-ClaudeBridge now includes an optional **native model-menu companion for Windows**. It inserts a ClaudeBridge control section into Claude Desktop's existing model dropdown while preserving the original Claude model selections.
+ClaudeBridge 2.4 includes an optional native **model-dropdown control panel** for all three supported desktop platforms. This adds a ClaudeBridge settings group without replacing the selected Claude model or changing the Claude MCP transport.
 
-The native section offers **Off**, **On demand**, **Fallback**, **Dual agents**, **Codex installed/connected status**, **Connect Codex**, and **Install / Repair**. Mode changes write to the same project-specific settings used by MCP.
+Controls: **Off**, **On demand**, **Fallback**, **Dual agents**, **Codex installed / ChatGPT connected**, **Connect Codex**, **Install / Repair**. These use the same persisted settings as the MCP extension.
 
-**Set up:**
+**Installation:**
 
-1. Install the Windows `.mcpb` extension normally. The Codex CLI and the optional native companion runtime are bundled.
-2. Tell Claude **“Open ClaudeBridge settings”**, then click **“Enable in model menu”**. This installs a user-scoped *ClaudeBridge Claude* shortcut. No system certificate or proxy is installed.
-3. **Fully quit Claude Desktop**, including its background process. Launch **ClaudeBridge Claude** from the new desktop/Start Menu shortcut. Open the existing model dropdown to see the additional ClaudeBridge controls.
+1. Install the matching `.mcpb` file in Claude Desktop. The Codex CLI and native companion runtime are bundled.
+2. Tell Claude **“Open ClaudeBridge settings”**; click **Enable in model menu**. This installs a per-user launcher, not a network proxy or a certificate.
+3. Fully quit Claude Desktop and start it using **ClaudeBridge Claude**, then open the original model dropdown.
 
-The native menu companion is distinct from the prototype `integrations/picker.js`, which would advertise a fake model ID and still lacks routing. The **new companion instead adds settings to the existing menu** without pretending to be a language model. It starts Claude Desktop with Chromium's local **debugging pipe**, attaches only to Claude renderer pages, and injects the controls. There is no open debugging TCP port.
+| OS | Optional launcher | Removal |
+| --- | --- | --- |
+| Windows | Desktop and Start Menu **ClaudeBridge Claude** shortcuts | **Remove integration** deletes owned shortcuts and companion files |
+| macOS | `~/Applications/ClaudeBridge Claude.app` | **Remove integration** deletes the owned app bundle and support folder |
+| Linux | `~/.local/share/applications/claudebridge-claude.desktop` (also Desktop shortcut when the Desktop folder exists) | **Remove integration** deletes owned desktop entries and support folder |
 
-To undo it, click **Remove integration** from the ClaudeBridge MCP App settings. Your regular Claude shortcut, original Claude model choices, files, and MCP extension remain intact. If Claude is currently using the companion launcher, close it before cleaning up locked files.
+The launcher starts the original Claude Desktop executable with Chromium's local debugging pipe, and inserts UI controls in the renderer. The original Claude executable, normal model choices, MCP tools, and certificates are not modified. The native controls are **an optional enhancement**, not a model proxy.
 
-**Compatibility status:** Automated tests exercise DOM insertion, mode-selection requests, debugging-pipe protocol handling, and Windows shortcut creation/removal. These do **not** prove compatibility with every real Claude Desktop version or installer type. Microsoft Store-only installations may not allow this custom launch method. If the companion cannot start, continue using the normal MCP App panel.
+**Compatibility:** Installers, protocol messages, DOM controls and rollback are covered by automated tests on GitHub-hosted Windows, macOS and Linux. Real authenticated Claude Desktop versions can use different renderer structures, permissions or packaging; compatibility with every client build is **not yet confirmed**. macOS requires a normal Claude.app installation; Linux requires an accessible Claude Desktop executable. Restricted/App Store/Flatpak-style packaging can prevent launching with extra Electron switches.
 
-See [Native model-menu integration details](docs/NATIVE-PICKER.md).
+If the new launcher does not work, use the regular Claude shortcut; MCP and the in-chat panel still work. See [Native model-menu integration details](docs/NATIVE-PICKER.md).
 
 ## Easy installation
 
@@ -97,31 +101,32 @@ Plan revisions and approvals are auditable in the project SQLite database. The b
 
 Claude Desktop communicates with the ClaudeBridge MCP server. The server manages a local project registry at **~/.claudebridge/projects.json**. Each project stores its own SQLite database under **.agent-bridge/state.sqlite**. Codex tasks run as detached worker processes and record messages, progress, heartbeats, and session IDs.
 
-## Clean uninstall and data removal (Windows)
+## Complete uninstall and data cleanup (all platforms)
 
-ClaudeBridge has two independent components: an MCP Desktop Extension managed by Claude and an optional native model-picker companion. **Removing one does not automatically remove the other.**
+The native menu companion, ClaudeBridge MCP extension and saved project memory are **separate** so uninstalling the UI never silently deletes your work.
 
-**Remove just the native model-menu controls:** Open ClaudeBridge settings and select **Remove integration**. This removes ClaudeBridge-owned shortcuts and companion files without changing Claude Desktop, its normal model list, or the MCP extension. If Windows has locked a running companion, completely quit Claude and rerun removal; the installer reports any remaining directory instead of claiming a clean uninstall.
+1. Fully quit Claude Desktop and any ClaudeBridge worker processes.
+2. Click **Remove integration** in ClaudeBridge settings to remove the optional native menu launcher.
+3. Remove the ClaudeBridge MCPB in Claude Desktop **Settings → Extensions** (the MCPB is owned by Claude's extension manager).
+4. Optionally remove saved tasks, settings, plans and file history. Review what would be removed before selecting permanent deletion.
 
-**Completely remove ClaudeBridge:**
-
-1. Fully quit Claude Desktop and stop running Codex tasks.
-2. Open Claude Desktop's **Extensions** settings and uninstall the ClaudeBridge MCPB. The Claude extension manager owns that installation.
-3. Run the optional cleanup tool `maintenance/cleanup.ps1` from an extracted ClaudeBridge source checkout to audit and remove user-local Bridge data. For permanent deletion, use explicit PowerShell switches:
+**Windows PowerShell** (from a ClaudeBridge source checkout):
 
 ```powershell
-# See what is present without deleting anything
 .\maintenance\cleanup.ps1 -AuditOnly -PurgeBridgeState -PurgeProjectMemory
-
-# Permanently delete registered project memory and Bridge settings
 .\maintenance\cleanup.ps1 -PurgeProjectMemory -PurgeBridgeState
 ```
 
-The cleanup tool asks for confirmation, never removes your actual project source directories, and never deletes global Codex or ChatGPT credentials. Project memory lives in each registered project's `.agent-bridge/` directory; the registry and settings live in `~/.claudebridge/`. Delete project memory **before** the registry, or use both switches together.
+**macOS / Linux**:
 
-For privacy, deliberately separate the persistent data deletion from normal extension uninstallation. If you want to keep your saved plans and project history, leave off both purge switches.
+```bash
+node maintenance/cleanup-unix.js --audit --purge-state --purge-project-memory
+node maintenance/cleanup-unix.js --yes --purge-project-memory --purge-state
+```
 
-**Limitations:** Microsoft Store/managed Claude installations may have different extension uninstall behavior. A locked native companion directory may need cleanup after the processes exit. An unregistered project directory or user-made backup is outside the tool's registry-based inventory. No application can guarantee removal of arbitrary copies, OS backups, or third-party caches.
+The scripts remove only ClaudeBridge-owned launchers and registered project state under `.agent-bridge/`. **Your source-code projects, Claude Desktop, global Codex CLI, and ChatGPT login are not deleted.** The platform cleanup reports paths that remain (for example, if a background worker still has files open). User-created backups or orphaned project folders not found in the registry are outside the automatic cleanup inventory.
+
+See the [audit report](docs/AUDIT.md) for tested safeguards and limitations.
 
 ## Important limitations
 
