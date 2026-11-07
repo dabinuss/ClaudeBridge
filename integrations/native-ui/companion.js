@@ -12,7 +12,7 @@ const configPath=path.join(__dirname,'native-ui.json');
 const config=JSON.parse(fs.readFileSync(configPath,'utf8').replace(/^\uFEFF/,''));
 const renderer=fs.readFileSync(path.join(__dirname,'renderer.js'),'utf8');
 const bin=String(config.claudeExe||'');
-if(process.platform!=='win32')throw Error('This companion launcher currently supports Windows only.');
+if(!['win32','darwin','linux'].includes(process.platform))throw Error('Unsupported Claude native picker platform.');
 if(!path.isAbsolute(bin)||!fs.existsSync(bin))throw Error('Claude Desktop executable was not found. Re-run Native Picker setup.');
 if(!fs.statSync(bin).isFile())throw Error('Claude executable is not a regular file.');
 const root=String(config.extensionRoot||'');
@@ -71,9 +71,10 @@ function execute(request){
   case 'login':return startLogin();
   case 'repair':{
    const url='https://github.com/dabinuss/ClaudeBridge/releases/tag/preview';
-   spawn('powershell.exe',['-NoProfile','-NonInteractive','-Command','Start-Process '+url],{
-    windowsHide:true,stdio:'ignore',shell:false
-   }).unref();
+   const opener=process.platform==='win32'?['powershell.exe',['-NoProfile','-NonInteractive','-Command','Start-Process '+url]]:
+     process.platform==='darwin'?['open',[url]]:['xdg-open',[url]];
+   const proc=spawn(opener[0],opener[1],{windowsHide:true,stdio:'ignore',shell:false});
+   proc.on('error',()=>{});proc.unref();
    return {...status(),instructions:'Opened ClaudeBridge releases to repair Codex.'};
   }
   default:throw Error('Unknown native picker action');
@@ -84,7 +85,7 @@ async function main(){
  const args=['--remote-debugging-pipe',...process.argv.slice(2)];
  const child=spawn(exe,args,{
   cwd:path.dirname(exe),stdio:['ignore','ignore','pipe','pipe','pipe'],
-  windowsHide:false,shell:false
+  windowsHide:process.platform==='win32'?false:true,shell:false
  });
  child.stderr.on('data',data=>{
   const line=data.toString().slice(0,1000);
