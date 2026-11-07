@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "claudebridge",
   "display_name": "ClaudeBridge",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "ClaudeBridge: Claude/Codex modes, an in-chat control panel, project memory, plans and parallel work.",
   "long_description": "MCP-first Claude and Codex coordination. An interactive in-chat control panel provides Off, Manual, Fallback and Dual modes plus Codex installation and sign-in status. Built-in project memory, plans, task state and bundled Codex CLI.",
   "author": {
