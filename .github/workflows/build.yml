@@ -113,7 +113,7 @@ jobs:
           CLAUDEBRIDGE_SETUP_TEST_HOME: ${{ runner.temp }}/claudebridge-online-test
           CLAUDEBRIDGE_SETUP_SKIP_NATIVE: '1'
         run: |
-          export CLAUDEBRIDGE_NPM_CLI="$(npm root -g)/npm/bin/npm-cli.js"
+          export CLAUDEBRIDGE_NPM_CLI="$(node -e 'const p=require("node:path"),f=require("node:fs"),d=p.dirname(process.execPath);const c=[p.join(d,"node_modules","npm","bin","npm-cli.js"),p.join(d,"..","lib","node_modules","npm","bin","npm-cli.js")];process.stdout.write(c.find(f.existsSync)||"")')"
           if [ ! -f "$CLAUDEBRIDGE_NPM_CLI" ]; then
             echo "Bundled npm CLI not found in CI environment" >&2
             exit 1
