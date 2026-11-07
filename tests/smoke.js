@@ -24,4 +24,17 @@ const tool=async(name,args={})=>{let r=await request('tools/call',{name,argument
   const resumed=await tool('bridge_resume',{task_id:created.id,task:'Continue the analysis'});
   assert(resumed.id!==created.id);
   console.log('PASS: MCP init/list, Codex discovery, notes, job lifecycle, JSONL parsing, session resume');
-})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>{p.kill();fs.rmSync(project,{force:true,recursive:true});});
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{
+  if(p.exitCode===null && p.signalCode===null) {
+    await new Promise(resolve=>{
+      p.once('exit',resolve);
+      p.kill();
+      setTimeout(resolve,2000).unref();
+    });
+  }
+  // Windows may retain the child's cwd briefly after it exits.
+  for(let i=0;i<10;i++) {
+    try {fs.rmSync(project,{recursive:true,force:true,maxRetries:5,retryDelay:100});break;}
+    catch(e){if(i===9)throw e;await new Promise(r=>setTimeout(r,150));}
+  }
+});
