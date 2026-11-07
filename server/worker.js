@@ -34,10 +34,12 @@ function command(binary){
   if(/\.bat$/i.test(binary))throw Error('Unsupported batch launcher');
   return [binary,[]];
 }
+let finalized=false;
 function finish(error,code){
+  if(finalized)return;finalized=true;
   clearInterval(heartbeat);clearTimeout(timeout);
   const state=task(db,id);
-  if(state.status==='cancelled')return;
+  if(state.status==='cancelled'){db.close();return;}
   const successful=!error&&code===0&&turnCompleted&&!turnFailed;
   patchTask(db,id,{status:successful?'completed':'failed',error:successful?null:String(error||state.error||'Codex exited without completing the turn').slice(0,1000),exit_code:code});
   message(db,'system','claude',successful?'Codex task completed: '+id:'Codex task failed: '+id+' '+String(error||''),id);
@@ -47,7 +49,9 @@ let heartbeat,timeout,turnCompleted=false,turnFailed=false;
 try{
   const binary=cli();
   const [exe,base]=command(binary);
-  const args=t.previous?['exec','resume',t.previous,'--json','-']:['exec','--json','--sandbox',t.mode==='review'?'read-only':'workspace-write'];
+  const previousTask=t.previous?task(db,t.previous):null;
+  if(t.previous&&(!previousTask||!previousTask.session_id))throw Error('Previous Codex session is not available for resume.');
+  const args=t.previous?['exec','resume',previousTask.session_id,'--json','-']:['exec','--json','--sandbox',t.mode==='review'?'read-only':'workspace-write'];
   if(!t.previous&&t.worktree&&t.mode==='code')args.push('--worktree');
   args.push('-');
   const context=db.prepare('SELECT sender,body FROM messages ORDER BY created DESC LIMIT 30').all().reverse();
