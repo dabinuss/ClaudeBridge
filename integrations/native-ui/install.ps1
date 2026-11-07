@@ -21,8 +21,19 @@ function Get-ClaudeExe {
   )
   foreach($candidate in $locations) {
     if(Test-Path $candidate) {
-      $target = $shell.CreateShortcut($candidate).TargetPath
-      if($target -and (Test-Path $target) -and $target.EndsWith(".exe")) { return $target }
+      $shortcut = $shell.CreateShortcut($candidate)
+      $target = $shortcut.TargetPath
+      if($target -and (Test-Path $target)) {
+        if([IO.Path]::GetFileName($target) -ieq "Claude.exe") { return $target }
+        # Older Squirrel shortcuts launch Update.exe --processStart Claude.exe.
+        if([IO.Path]::GetFileName($target) -ieq "Update.exe" -and $shortcut.Arguments -match 'Claude\.exe') {
+          $appDir = Get-ChildItem -LiteralPath (Split-Path $target) -Directory -Filter "app-*" -ErrorAction SilentlyContinue |
+            Sort-Object Name -Descending | Select-Object -First 1
+          if($appDir -and (Test-Path (Join-Path $appDir.FullName "Claude.exe"))) {
+            return (Join-Path $appDir.FullName "Claude.exe")
+          }
+        }
+      }
     }
   }
   $guesses = @(
@@ -33,6 +44,15 @@ function Get-ClaudeExe {
   )
   foreach($candidate in $guesses) {
     if(Test-Path $candidate) { return (Resolve-Path $candidate).Path }
+  }
+  foreach($baseDir in @((Join-Path $env:LOCALAPPDATA "Claude"),(Join-Path $env:LOCALAPPDATA "Programs\Claude"))) {
+    if(Test-Path $baseDir) {
+      $appDir = Get-ChildItem -LiteralPath $baseDir -Directory -Filter "app-*" -ErrorAction SilentlyContinue |
+        Sort-Object Name -Descending | Select-Object -First 1
+      if($appDir -and (Test-Path (Join-Path $appDir.FullName "Claude.exe"))) {
+        return (Join-Path $appDir.FullName "Claude.exe")
+      }
+    }
   }
   $command = Get-Command "Claude.exe" -ErrorAction SilentlyContinue
   if($command -and $command.Source -and (Test-Path $command.Source)) { return $command.Source }
