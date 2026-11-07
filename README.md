@@ -4,7 +4,7 @@
 
 ![Version](https://img.shields.io/badge/version-2.6.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
 
-> Preview: ClaudeBridge is an MCP Desktop Extension with an **optional Windows/macOS/Linux native model-menu companion**. The companion adds UI controls, not an alternative language model; it never intercepts network requests or replaces MCP. Authenticated Claude Desktop testing is still required.
+> Preview: ClaudeBridge runs as a local MCP server in the normal Claude Desktop client. Its in-chat MCP App exposes agent settings. The original Chat model dropdown is **not yet supported** by a verified third-party integration. No separate Claude launcher is required or installed.
 
 ## Small online setup (recommended)
 
@@ -24,7 +24,7 @@
 
 All ClaudeBridge-owned code is downloaded upfront inside the small installer. The additional program files are transferred **during setup**, so internet access is required. This changes the *installer download size*, not necessarily the final amount of installed data.
 
-The installer registers only its own `claudebridge` MCP server in Claude Desktop's user configuration and creates the optional native model-menu launcher if the installed Claude Desktop edition supports it. It preserves other MCP entries and does not modify the original Claude executable, system certificates or proxy settings.
+The installer registers only its own `claudebridge` MCP server in Claude Desktop's user configuration. It **does not install an alternate Claude launcher**. It preserves other MCP entries and does not modify the original Claude executable, system certificates or proxy settings.
 
 **To update or uninstall**, start **the same file** again. Existing private Node.js and ClaudeBridge files are reused for uninstall, so removing ClaudeBridge does not require redownloading the application. You may keep or explicitly delete saved plans and project memory; your project source code is never deleted.
 
@@ -49,29 +49,15 @@ When your Claude Desktop build supports local MCP Apps rendering, the panel appe
 
 The same settings are available to Claude as MCP tools through normal-language requests. No slash commands are needed.
 
-## Native model-picker controls (Windows, macOS and Linux preview)
+## Native Chat model-picker integration — open requirement
 
-ClaudeBridge 2.4 includes an optional native **model-dropdown control panel** for all three supported desktop platforms. This adds a ClaudeBridge settings group without replacing the selected Claude model or changing the Claude MCP transport.
+Our target is an **automatic ClaudeBridge control inside the existing Chat model picker**, while using the original Claude Desktop application and icon. This **is not yet implemented**.
 
-Controls: **Off**, **On demand**, **Fallback**, **Dual agents**, **Codex installed / ChatGPT connected**, **Connect Codex**, **Install / Repair**. These use the same persisted settings as the MCP extension.
+MCP/desktop extensions officially expose tools to Claude chats and can display MCP App settings inside supported conversations. Neither MCP, Skills, Claude Chat plugins nor standard hooks currently provide a documented way to add arbitrary controls to Claude Desktop's original **Chat** model selector. Some community projects modify the separate **Claude Code** picker; that does not demonstrate support for the ordinary Chat tab.
 
-**Installation:**
+The earlier CDP companion needed a *separate launcher*. It violates this project's product requirement and is **disabled for new installations**. The legacy uninstall operation remains available for anyone who installed it in an earlier preview.
 
-1. Install the matching `.mcpb` file in Claude Desktop. The Codex CLI and native companion runtime are bundled.
-2. Tell Claude **“Open ClaudeBridge settings”**; click **Enable in model menu**. This installs a per-user launcher, not a network proxy or a certificate.
-3. Fully quit Claude Desktop and start it using **ClaudeBridge Claude**, then open the original model dropdown.
-
-| OS | Optional launcher | Removal |
-| --- | --- | --- |
-| Windows | Desktop and Start Menu **ClaudeBridge Claude** shortcuts | **Remove integration** deletes owned shortcuts and companion files |
-| macOS | `~/Applications/ClaudeBridge Claude.app` | **Remove integration** deletes the owned app bundle and support folder |
-| Linux | `~/.local/share/applications/claudebridge-claude.desktop` (also Desktop shortcut when the Desktop folder exists) | **Remove integration** deletes owned desktop entries and support folder |
-
-The launcher starts the original Claude Desktop executable with Chromium's local debugging pipe, and inserts UI controls in the renderer. The original Claude executable, normal model choices, MCP tools, and certificates are not modified. The native controls are **an optional enhancement**, not a model proxy.
-
-**Compatibility:** Installers, protocol messages, DOM controls and rollback are covered by automated tests on GitHub-hosted Windows, macOS and Linux. Real authenticated Claude Desktop versions can use different renderer structures, permissions or packaging; compatibility with every client build is **not yet confirmed**. macOS requires a normal Claude.app installation; Linux requires an accessible Claude Desktop executable. Restricted/App Store/Flatpak-style packaging can prevent launching with extra Electron switches.
-
-If the new launcher does not work, use the regular Claude shortcut; MCP and the in-chat panel still work. See [Native model-menu integration details](docs/NATIVE-PICKER.md).
+See [binding product requirements](docs/PRODUCT-REQUIREMENTS.md). We will not claim native Chat menu support until the normal, unmodified Claude launcher has been verified end-to-end on Windows, macOS and Linux.
 
 ## Easy installation
 
