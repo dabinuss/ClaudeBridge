@@ -35,7 +35,7 @@ ClaudeBridge is a lightweight, dependency-free [Model Context Protocol (MCP)](ht
    codex login
    ```
 
-3. Download **ClaudeBridge.mcpb** from the [latest release](https://github.com/dabinuss/ClaudeBridge/releases/latest). Until a release is published, obtain the build artifact from [GitHub Actions](https://github.com/dabinuss/ClaudeBridge/actions/workflows/build.yml) (GitHub login may be required).
+3. Download **[ClaudeBridge.mcpb](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge.mcpb)** from the public preview release. This download is updated automatically after all Windows, macOS, and Linux CI checks pass. If the preview has not been published yet, use the [GitHub Actions build artifact](https://github.com/dabinuss/ClaudeBridge/actions/workflows/build.yml).
 4. Double-click the `.mcpb` file, or open **Claude Desktop → Settings → Extensions → Install Extension**. Choose your **local code folder** when prompted.
 5. Restart Claude Desktop if needed, then say:
 
