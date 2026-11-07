@@ -121,13 +121,32 @@ function stopTask(args){
   }finally{db.close();}
 }
 function codexLogin(){
-  const bin=codexBinary();if(!bin)throw Error('Codex not installed.');
-  if(auth().status==='signed_in')return {status:'signed_in',message:'Already connected to your ChatGPT account.'};
-  // Start the device authorization flow and show its code / URL in Claude.
-  const [exe,args]=codexCommand(bin,['login','--device-auth']);
-  const result=spawnSync(exe,args,{encoding:'utf8',timeout:12000,windowsHide:true,maxBuffer:65536});
-  return {status:'action_required',instructions:String((result.stdout||'')+'\n'+(result.stderr||'')).slice(0,3000),
-    fallback:'If no device code was shown, open a terminal and run codex login. Sign-in cannot be completed without user approval.'};
+  const bin=codexBinary();
+  if(!bin)throw Error('Codex CLI is missing. Install a bundled platform package.');
+  if(auth().status==='signed_in')return {status:'signed_in',message:'Codex is already connected to your ChatGPT account.'};
+  const file=path.join(store.home,'login-device.log');
+  const pidFile=path.join(store.home,'login-process.json');
+  let pid=null;
+  if(fs.existsSync(pidFile)){
+    try{pid=JSON.parse(fs.readFileSync(pidFile,'utf8')).pid;process.kill(pid,0);}
+    catch{pid=null;}
+  }
+  if(!pid){
+    fs.writeFileSync(file,'Starting ChatGPT device authentication. Please approve sign-in in your browser.\n',{mode:0o600});
+    const fd=fs.openSync(file,'a',0o600);
+    const [exe,args]=codexCommand(bin,['login','--device-auth']);
+    try{
+      const proc=spawn(exe,args,{cwd:store.home,detached:true,windowsHide:true,stdio:['ignore',fd,fd],shell:false});
+      proc.on('error',()=>{});
+      pid=proc.pid||null;
+      proc.unref();
+      fs.writeFileSync(pidFile,JSON.stringify({pid,started:new Date().toISOString()}),{mode:0o600});
+    }finally{fs.closeSync(fd);}
+  }
+  const output=fs.readFileSync(file,'utf8').slice(-5000);
+  return {status:'action_required',loginProcessId:pid,
+    instructions:output,
+    nextStep:'Open the verification URL and enter the device code shown above. Then tell Claude: "Check whether Codex is signed in." If no code is visible yet, ask Claude to start/check Codex login again. If device login is unavailable, use codex login in a terminal.'};
 }
 const props=(o,required=[])=>({type:'object',properties:o,required});
 const specs=[
