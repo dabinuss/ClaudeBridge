@@ -6,6 +6,7 @@ const os=require('node:os');
 const readline=require('node:readline');
 const {spawn,spawnSync}=require('node:child_process');
 const store=require('./db');
+const memory=require('./memory');
 const {registerProject,chooseProject,currentProject,registeredProjects,openDb,addTask,patchTask,task,listTasks,message,messages}=store;
 const bundled=path.resolve(__dirname,'..','vendor','node_modules','@openai','codex','bin','codex.js');
 function codexBinary(){
@@ -56,6 +57,19 @@ function diagnose(){
       login.status!=='signed_in'?'One-time sign-in required. Ask Claude to start Codex sign-in or run codex login.':'Ask Claude to delegate a task to Codex.',
     interface:'Natural language in Claude Desktop; no slash commands are required.'};
 }
+function ensureMemoryMonitor(p){
+  const file=path.join(p.path,'.agent-bridge','memory-monitor.pid');
+  if(fs.existsSync(file)){
+    const pid=Number(fs.readFileSync(file,'utf8').trim());
+    if(pid>0){try{process.kill(pid,0);return;}catch{}}
+  }
+  memory.capture(p.path);
+  const child=spawn(process.execPath,[path.join(__dirname,'memory-monitor.js'),p.path],{
+    cwd:os.tmpdir(),detached:true,windowsHide:true,stdio:'ignore',shell:false
+  });
+  child.on('error',()=>{});
+  child.unref();
+}
 function ensureWatchdog(p){
   const file=path.join(p.path,'.agent-bridge','watchdog.pid');
   if(fs.existsSync(file)){
@@ -98,6 +112,7 @@ function delegate(args){
     child.on('error',()=>{});
     child.unref();
     ensureWatchdog(p);
+    ensureMemoryMonitor(p);
     return {id,status:'queued',project:p.name,mode,worktree:useWorktree,
       note:'Codex is running independently. Claude may continue other work. Ask for Codex status or check the project messages.'};
   }finally{db.close();}
@@ -117,6 +132,11 @@ function sendMessage(args){
   const [,db]=projectDb();
   try{return message(db,'claude',String(args.to||'codex'),args.message,args.task_id||null);}
   finally{db.close();}
+}
+function workingMemory(args={}){
+  const [p,db]=projectDb();db.close();
+  ensureMemoryMonitor(p);
+  return args.timeline?{project:p.name,timeline:memory.timeline(p.path,args.limit||40)}:memory.digest(p.path);
 }
 function context(){
   const [p,db]=projectDb();
@@ -184,6 +204,7 @@ const specs=[
  {name:'bridge_delegate',description:'Delegate coding or read-only review work to a detached Codex worker. Claude can work concurrently. Writing tasks default to a safe Git worktree; do not claim that a worktree is merged into the main project.',inputSchema:props({task:{type:'string'},mode:{type:'string',enum:['code','review']},worktree:{type:'boolean'},previous:{type:'string'}},['task'])},
  {name:'bridge_status',description:'Report Codex progress, completion or an interrupted task. If no task ID, list recent tasks.',inputSchema:props({task_id:{type:'string'}})},
  {name:'bridge_context',description:'Read durable agent messages and recent tasks for the current project.',inputSchema:props({})},
+ {name:'bridge_memory',description:'Read token-efficient automatically timestamped project timeline, file changes, Git changes, decisions and resumable tasks.',inputSchema:props({timeline:{type:'boolean'},limit:{type:'integer',minimum:1,maximum:100}})},
  {name:'bridge_message',description:'Post a message for another agent. Messages are persisted in the project database and included in future Codex tasks.',inputSchema:props({message:{type:'string'},to:{type:'string'},task_id:{type:'string'}},['message'])},
  {name:'bridge_checkpoint',description:'Write a durable handoff/decision that will appear in Codex tasks.',inputSchema:props({note:{type:'string'}},['note'])},
  {name:'bridge_cancel',description:'Stop an active Codex task.',inputSchema:props({task_id:{type:'string'}},['task_id'])},
@@ -196,13 +217,18 @@ function call(name,args={}){
     case 'bridge_health':return diagnose();
     case 'bridge_project':{
       if(args.action==='list')return registeredProjects();
-      if(args.action==='register')return registerProject(args.path,args.name);
-      if(args.action==='select')return chooseProject(args.id);
+      if(args.action==='register'){
+        const p=registerProject(args.path,args.name);ensureMemoryMonitor(p);return p;
+      }
+      if(args.action==='select'){
+        const p=chooseProject(args.id);ensureMemoryMonitor(p);return p;
+      }
       throw Error('Unknown project action');
     }
     case 'bridge_delegate':return delegate(args);
     case 'bridge_status':return bridgeStatus(args);
     case 'bridge_context':return context();
+    case 'bridge_memory':return workingMemory(args);
     case 'bridge_message':return sendMessage(args);
     case 'bridge_checkpoint':return sendMessage({to:'all',message:args.note});
     case 'bridge_cancel':return stopTask(args);
@@ -218,7 +244,7 @@ async function handle(req){
   try{
     let result;
     if(req.method==='initialize')result={protocolVersion:req.params?.protocolVersion||'2025-06-18',serverInfo:{name:'claudebridge',version:'2.0.0'},capabilities:{tools:{}},
-      instructions:'Use ClaudeBridge naturally. When a user asks for Codex help, check bridge_health, register or select the project if needed, and delegate work. Check bridge_context for messages. Tell the user when a Git worktree needs separate review/merge. Never claim to read hidden Claude threads or automatically detect Claude subscription quotas.'};
+      instructions:'Use ClaudeBridge naturally. When a user asks for Codex help, check bridge_health, register or select the project if needed, consult bridge_memory for recent changes, and delegate work. Check bridge_context for messages. Tell the user when a Git worktree needs separate review/merge. Never claim to read hidden Claude threads or automatically detect Claude subscription quotas.'};
     else if(req.method==='ping')result={};
     else if(req.method==='tools/list')result={tools:specs};
     else if(req.method==='tools/call'){
