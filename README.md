@@ -2,13 +2,13 @@
 
 **Use Claude Desktop and Codex CLI together through ordinary Claude conversations. No slash commands required.**
 
-![Version](https://img.shields.io/badge/version-2.2.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
+![Version](https://img.shields.io/badge/version-2.2.1--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
 
 > Preview: ClaudeBridge runs as an MCP Desktop Extension. It cannot change the proprietary Claude chat UI, read hidden Claude conversation context, or bypass subscription limits.
 
 ## ClaudeBridge control panel inside Claude
 
-ClaudeBridge 2.2 adds an interactive **MCP Apps** control panel without replacing the MCP bridge. In your Claude conversation, ask:
+ClaudeBridge 2.2.1 includes an interactive **MCP Apps** control panel without replacing the MCP bridge. In your Claude conversation, ask:
 
 > **Open ClaudeBridge settings.**
 
