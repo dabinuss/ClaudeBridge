@@ -2,9 +2,9 @@
   "manifest_version": "0.3",
   "name": "claudebridge",
   "display_name": "ClaudeBridge",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Connect Claude Desktop with Codex CLI for task delegation, progress tracking and project handoffs.",
-  "long_description": "Project-scoped MCP bridge for Claude Desktop and Codex CLI. Supports asynchronous tasks, read-only code reviews, status, cancellation, handoff notes, and Codex session continuation. Uses your existing Codex CLI login; no API key is required.",
+  "long_description": "Delegate coding and read-only review from Claude Desktop to Codex CLI. Local project handoffs, progress tracking, and session continuation. Use your existing Codex sign-in; no API key required.",
   "author": {
     "name": "ClaudeBridge contributors"
   },
@@ -36,14 +36,14 @@
     "project_directory": {
       "type": "directory",
       "title": "Project directory",
-      "description": "Local source-code directory for Claude and Codex collaboration. Reconfigure the extension when switching projects.",
+      "description": "Choose the LOCAL source-code folder shared by Claude and Codex. You can change it later in Extension settings.",
       "required": true
     }
   },
   "tools": [
     {
       "name": "bridge_health",
-      "description": "Check Codex CLI and project setup."
+      "description": "Quick setup check: show whether Codex is installed, connected to the selected folder, and ready to accept tasks."
     },
     {
       "name": "bridge_delegate",
