@@ -13,7 +13,7 @@ button{cursor:pointer}button:disabled{opacity:.4;cursor:default}
 .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 #msg{font-size:12px;white-space:pre-wrap;min-height:1em}
 </style></head><body>
-<h2>ClaudeBridge</h2><p>Model coordination · Local project memory · ChatGPT/Codex account</p>
+<h2>ClaudeBridge</h2><p>Model coordination · Local project memory · ChatGPT/Codex account</p><small id="project">Global settings (select a project in Claude to override)</small>
 <div class="section">
 <div class="row"><strong>Agent mode</strong><select id="mode"><option value="off">Off</option><option value="manual">On demand</option><option value="fallback">Fallback</option><option value="dual">Dual agents</option></select></div>
 <small id="explanation">On demand: Claude delegates work to Codex when requested.</small>
@@ -41,6 +41,7 @@ function show(text){$('msg').textContent=text;}
 async function refresh(){
  try{
   const [config,health]=await Promise.all([call('bridge_settings',{action:'get'}),call('bridge_health',{})]);
+  $('project').textContent=health.project?'Project: '+health.project.name:'Global defaults (no project selected)';
   $('mode').value=config.mode;
   $('memory').checked=Boolean(config.memoryEnabled);
   $('explanation').textContent=explanation[config.mode]||'';
