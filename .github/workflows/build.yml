@@ -45,6 +45,9 @@ jobs:
         run: node tests/v2.js
       - name: Bundle Codex CLI for this platform
         run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex
+      - name: Check bundled Codex CLI
+        shell: bash
+        run: node vendor/node_modules/@openai/codex/bin/codex.js --version
       - name: Set manifest platform
         shell: bash
         run: |
@@ -73,6 +76,11 @@ jobs:
         with:
           pattern: ClaudeBridge-*
           merge-multiple: true
+      - name: Remove obsolete non-platform preview asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release delete-asset preview ClaudeBridge.mcpb -y 2>/dev/null || true
       - name: Publish preview installers
         env:
           GH_TOKEN: ${{ github.token }}
