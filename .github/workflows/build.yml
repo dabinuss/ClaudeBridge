@@ -116,6 +116,8 @@ jobs:
         run: node tests/ripple-certs.js
       - name: Test HTTPS bootstrap interception
         run: node tests/ripple-proxy.js
+      - name: Test user-scoped TLS trust lifecycle
+        run: node tests/ripple-trust.js
       - name: Check bundled Codex CLI
         shell: bash
         run: node vendor/node_modules/@openai/codex/bin/codex.js --version
