@@ -3,6 +3,7 @@
 // remain opaque CONNECT tunnels. Preserve HTTP streaming for other claude.ai routes.
 // Explicit user trust is required before enabling this in Claude Desktop.
 const fs=require('node:fs');
+const crypto=require('node:crypto');
 const http=require('node:http');
 const https=require('node:https');
 const net=require('node:net');
@@ -12,13 +13,28 @@ const {transformBootstrap,MAX_BODY}=require('./transform');
 const {parseAuthority}=require('./transport');
 const {createIdentity}=require('./certs');
 const {ROUTE_ID,runCodex,writeAnswer}=require('./codex-model');
-function makePickerProxy({dir,host='127.0.0.1',port=0,models=[],upstream='claude.ai',dial=net.connect,request=https.request,route=runCodex}={}){
+function makePickerProxy({dir,host='127.0.0.1',port=0,models=[],upstream='claude.ai',dial=net.connect,request=https.request,route=runCodex,controlToken=null,onShutdown=null}={}){
  if(!['127.0.0.1','::1'].includes(host))throw Error('Loopback binding required');
  if(upstream!=='claude.ai')throw Error('Only Claude bootstrap interception is supported');
  if(!Array.isArray(models))throw Error('Models must be an array');
  const identity=createIdentity(dir);
  const counters={connects:0,intercepted:0,changed:0,passThrough:0,routed:0,errors:0};
- const server=http.createServer((req,res)=>{res.writeHead(405);res.end();});
+ const server=http.createServer((req,res)=>{
+  const supplied=String(req.headers['x-claudebridge-token']||'');
+  const actual=typeof controlToken==='string'?controlToken:'';
+  const authorized=actual.length===64&&supplied.length===actual.length&&
+    crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(supplied));
+  if(!authorized){res.writeHead(403);res.end();return;}
+  if(req.method==='GET'&&req.url==='/__claudebridge/health'){
+   res.writeHead(200,{'content-type':'application/json','cache-control':'no-store'});
+   res.end(JSON.stringify({ok:true}));return;
+  }
+  if(req.method==='POST'&&req.url==='/__claudebridge/stop'&&typeof onShutdown==='function'){
+   res.writeHead(200,{'cache-control':'no-store'});res.end('Stopping');
+   setImmediate(onShutdown);return;
+  }
+  res.writeHead(404);res.end();
+ });
  const localHttp=http.createServer((req,res)=>{
   if(!req.url?.startsWith('/')||req.url.startsWith('//')){res.writeHead(400);res.end();return;}
   const target=req.socket.servername==='api.anthropic.com'?'api.anthropic.com':'claude.ai';
