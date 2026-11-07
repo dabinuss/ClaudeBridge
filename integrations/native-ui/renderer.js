@@ -68,8 +68,8 @@
   if(menu.querySelector('['+marker+']'))return;
   const root=element('div','','');root.setAttribute(marker,'');
   root.setAttribute('role','group');root.setAttribute('aria-label','ClaudeBridge controls');
-  root.addEventListener('pointerdown',e=>e.stopPropagation(),true);
-  root.addEventListener('click',e=>e.stopPropagation(),true);
+  root.addEventListener('pointerdown',e=>e.stopPropagation());
+  root.addEventListener('click',e=>e.stopPropagation());
   root.append(element('div','cb-header','ClaudeBridge'));
   const modes=element('div','cb-modes','');
   for(const [mode,label] of Object.entries(labels)){
