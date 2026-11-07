@@ -196,6 +196,12 @@ function uninstall(){
  let nativeResult;
  try{nativeResult=native('remove');}
  catch(e){nativeResult={error:e.message};}
+ if(nativeResult?.error||nativeResult?.pendingCleanup){
+  log(JSON.stringify({ok:false,native:nativeResult,mcpRemoved:false,programFilesPreserved:true,
+   message:'Native launcher is still active or could not be removed. Fully quit Claude and retry uninstall; the shared Node runtime and MCP remain available.'}));
+  process.exitCode=2;
+  return;
+ }
  const oldMarker=JSON.parse(fs.readFileSync(marker,'utf8'));
  const changed=configure('remove',true);
  if(oldMarker.backupCreated===true){
