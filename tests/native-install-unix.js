@@ -17,7 +17,8 @@ try{
  const done=installer.install(sourceRoot);
  assert(done.installed,JSON.stringify(done));
  assert(fs.existsSync(done.shortcut),'Native launcher missing');
- assert(fs.existsSync(path.join(done.directory,'node')),'Bundled Node missing');
+ assert(!fs.existsSync(path.join(done.directory,'node')),'Native launcher must not duplicate Node runtime');
+ assert(fs.existsSync(path.join(sourceRoot,'integrations/native-ui/node')),'Shared Node missing');
  assert(fs.existsSync(path.join(done.directory,'native-ui.json')),'Native config missing');
  assert(fs.existsSync(path.join(done.directory,'settings.js')),'Settings missing');
  assert.equal(installer.status().installed,true);
