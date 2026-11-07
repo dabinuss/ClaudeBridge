@@ -108,6 +108,8 @@ jobs:
         run: node tests/ripple-lite.js
       - name: Test Ripple-lite CONNECT transport
         run: node tests/ripple-transport.js
+      - name: Test Ripple-lite scoped bootstrap response transform
+        run: node tests/ripple-transform.js
       - name: Check bundled Codex CLI
         shell: bash
         run: node vendor/node_modules/@openai/codex/bin/codex.js --version
