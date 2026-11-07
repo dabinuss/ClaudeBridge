@@ -53,6 +53,7 @@ jobs:
           node --check integrations/native-ui/companion.js
           node --check integrations/native-ui/cdp.js
           node --check integrations/native-ui/setup-unix.js
+          node --check maintenance/cleanup-unix.js
       - name: Run legacy smoke tests
         run: node tests/smoke.js
       - name: Run v2 smoke tests
@@ -110,6 +111,10 @@ jobs:
         if: matrix.platform != 'win32'
         shell: bash
         run: node tests/native-install-unix.js
+      - name: Verify full macOS/Linux cleanup
+        if: matrix.platform != 'win32'
+        shell: bash
+        run: node tests/cleanup-unix.js
       - name: Test Windows native picker install and rollback
         if: matrix.platform == 'win32'
         shell: pwsh
@@ -121,7 +126,7 @@ jobs:
       - name: Bundle ClaudeBridge Extension
         shell: pwsh
         run: |
-          Compress-Archive -Path manifest.json,server,vendor,ui,integrations -DestinationPath "ClaudeBridge-${{ matrix.label }}.zip" -Force
+          Compress-Archive -Path manifest.json,server,vendor,ui,integrations,maintenance -DestinationPath "ClaudeBridge-${{ matrix.label }}.zip" -Force
           Rename-Item "ClaudeBridge-${{ matrix.label }}.zip" "ClaudeBridge-${{ matrix.label }}.mcpb"
       - name: Upload build
         uses: actions/upload-artifact@v4
