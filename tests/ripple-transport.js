@@ -1,0 +1,25 @@
+'use strict';
+const assert=require('node:assert/strict');
+const net=require('node:net');
+const http=require('node:http');
+const {createProxy,parseAuthority}=require('../integrations/ripple-lite/transport');
+(async()=>{
+ assert.deepEqual(parseAuthority('example.com:443'),{host:'example.com',port:443});
+ assert.equal(parseAuthority('bad@other:443'),null);
+ assert.equal(parseAuthority('example.com:65536'),null);
+ assert.throws(()=>createProxy({host:'0.0.0.0'}));
+ const target=net.createServer(s=>s.on('data',d=>s.write(d)));
+ await new Promise(resolve=>target.listen(0,'127.0.0.1',resolve));
+ const proxy=createProxy();const addr=await proxy.listen();
+ const c=net.connect(addr.port,'127.0.0.1');
+ await new Promise(resolve=>c.once('connect',resolve));
+ c.write('CONNECT 127.0.0.1:'+target.address().port+' HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n');
+ let received='';c.on('data',d=>{received+=d.toString();});
+ const eventually=async(pred)=>{for(let i=0;i<100;i++){if(pred())return;await new Promise(r=>setTimeout(r,10));}throw Error('Timed out: '+received);};
+ await eventually(()=>received.includes('200 Connection Established'));
+ c.write('ping');
+ await eventually(()=>received.includes('ping'));
+ assert.equal(proxy.counters.connects,1);
+ c.destroy();target.close();await proxy.close();
+ console.log('PASS: loopback-only CONNECT transport with transparent byte forwarding');
+})().catch(e=>{console.error(e);process.exitCode=1;});
