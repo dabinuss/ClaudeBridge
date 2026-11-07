@@ -8,7 +8,7 @@ const {spawn,spawnSync}=require('node:child_process');
 const settings=require('./settings');
 const home=path.join(os.homedir(),'.claudebridge');
 const configPath=path.join(__dirname,'native-ui.json');
-const config=JSON.parse(fs.readFileSync(configPath,'utf8'));
+const config=JSON.parse(fs.readFileSync(configPath,'utf8').replace(/^\uFEFF/,''));
 const renderer=fs.readFileSync(path.join(__dirname,'renderer.js'),'utf8');
 const bin=String(config.claudeExe||'');
 if(process.platform!=='win32')throw Error('This companion launcher currently supports Windows only.');
