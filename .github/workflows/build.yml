@@ -56,6 +56,8 @@ jobs:
           node --check maintenance/cleanup-unix.js
           node --check installer/setup.js
           node --check installer/build-unix.js
+          node --check installer/online-deps.js
+          node --check installer/build-online.js
       - name: Run legacy smoke tests
         run: node tests/smoke.js
       - name: Run v2 smoke tests
@@ -176,6 +178,8 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout source for the online installer builder
+        uses: actions/checkout@v4
       - name: Check current source revision
         id: current
         env:
@@ -195,6 +199,16 @@ jobs:
         with:
           pattern: ClaudeBridge-*
           merge-multiple: true
+      - name: Build SHA256-pinned lightweight online setup files
+        if: steps.current.outputs.publish == 'true'
+        run: |
+          node installer/build-online.js
+          test -s ClaudeBridge-Online-Core.tar.gz
+          test "$(wc -c < ClaudeBridge-WebSetup-Windows.cmd)" -lt 1048576
+          test "$(wc -c < ClaudeBridge-WebSetup-macOS.command)" -lt 1048576
+          test "$(wc -c < ClaudeBridge-WebSetup-Linux.run)" -lt 1048576
+          bash -n ClaudeBridge-WebSetup-Linux.run
+          bash -n ClaudeBridge-WebSetup-macOS.command
       - name: Remove obsolete non-platform preview asset
         if: steps.current.outputs.publish == 'true'
         env:
@@ -203,7 +217,7 @@ jobs:
         run: gh release delete-asset preview ClaudeBridge.mcpb -y 2>/dev/null || true
       - name: Generate SHA-256 checksums
         if: steps.current.outputs.publish == 'true'
-        run: sha256sum ClaudeBridge-*.mcpb ClaudeBridge-Setup-* > SHA256SUMS
+        run: sha256sum ClaudeBridge-*.mcpb ClaudeBridge-Setup-* ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-* > SHA256SUMS
       - name: Publish preview installers
         if: steps.current.outputs.publish == 'true'
         env:
@@ -211,7 +225,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           if gh release view preview >/dev/null 2>&1; then
-            gh release upload preview ClaudeBridge-*.mcpb ClaudeBridge-Setup-* SHA256SUMS --clobber
+            gh release upload preview ClaudeBridge-*.mcpb ClaudeBridge-Setup-* ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-* SHA256SUMS --clobber
           else
-            gh release create preview ClaudeBridge-*.mcpb ClaudeBridge-Setup-* SHA256SUMS --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Experimental cross-platform desktop extensions. Codex CLI is bundled. One-time ChatGPT sign-in remains required." --prerelease
+            gh release create preview ClaudeBridge-*.mcpb ClaudeBridge-Setup-* ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-* SHA256SUMS --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Experimental cross-platform desktop extensions. Codex CLI is bundled. One-time ChatGPT sign-in remains required." --prerelease
           fi
