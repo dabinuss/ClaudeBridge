@@ -104,6 +104,7 @@ function configure(action,allowAbsent=false){
  return true;
 }
 function native(action){
+ if(action==='remove'&&process.env.CLAUDEBRIDGE_TEST_NATIVE_BUSY==='1')return {pendingCleanup:true};
  if(process.env.CLAUDEBRIDGE_SETUP_SKIP_NATIVE==='1')return {skipped:true,reason:'native step deliberately disabled for tests'};
  if(platform==='win32'){
   const script=path.join(installPath,'integrations','native-ui','install.ps1');
