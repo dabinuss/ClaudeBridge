@@ -2,9 +2,9 @@
   "manifest_version": "0.3",
   "name": "claudebridge",
   "display_name": "ClaudeBridge",
-  "version": "2.3.0",
-  "description": "ClaudeBridge: optional native Claude model-menu controls, Codex authentication, dual agents, and project memory.",
-  "long_description": "Integrate Claude and Codex from the original Claude Desktop interface. Keep the MCP extension, use optional Windows native model-picker controls through a local debugging pipe, and configure Off, On Demand, Fallback and Dual modes. Includes Codex CLI and persistent project memory.",
+  "version": "2.4.0",
+  "description": "ClaudeBridge: original Claude model-menu controls on Windows, macOS and Linux with Codex and MCP.",
+  "long_description": "Run ClaudeBridge in Claude Desktop on Windows, macOS or Linux. The optional native model-menu launcher supplies Off, Manual, Fallback and Dual controls while preserving MCP, Codex login and project memory.",
   "author": {
     "name": "ClaudeBridge contributors"
   },
@@ -40,7 +40,7 @@
     },
     {
       "name": "bridge_native_picker",
-      "description": "Install, inspect or remove optional Windows native Claude model-menu controls without changing MCP."
+      "description": "Install, inspect or remove native Claude model-menu controls on Windows, macOS or Linux."
     },
     {
       "name": "bridge_health",
