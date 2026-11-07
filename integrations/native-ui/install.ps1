@@ -67,9 +67,17 @@ if($Action -eq "status") {
   } | ConvertTo-Json -Compress
   exit 0
 }
+function Test-OwnedShortcut([string]$ShortcutPath) {
+  if(!(Test-Path -LiteralPath $ShortcutPath)) { return $false }
+  $wsh = New-Object -ComObject WScript.Shell
+  $shortcut = $wsh.CreateShortcut($ShortcutPath)
+  $expected = Join-Path $base "launcher.vbs"
+  return ([IO.Path]::GetFileName($shortcut.TargetPath) -ieq "wscript.exe") -and
+    ($shortcut.Arguments -match [regex]::Escape($expected))
+}
 if($Action -eq "remove") {
   foreach($item in @($link,$desktopLink)) {
-    if(Test-Path $item) { Remove-Item -LiteralPath $item -Force }
+    if(Test-OwnedShortcut $item) { Remove-Item -LiteralPath $item -Force }
   }
   $pendingCleanup = $false
   if(Test-Path $base) {
@@ -79,6 +87,7 @@ if($Action -eq "remove") {
   [PSCustomObject]@{
     installed = $false
     pendingCleanup = $pendingCleanup
+    remainingDirectory = if(Test-Path $base) { $base } else { $null }
     message = if($pendingCleanup) {
       "Native picker shortcuts were removed. Quit Claude Desktop to release locked companion files; remove the leftover NativePicker directory afterward. MCP remains unchanged."
     } else {
