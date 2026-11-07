@@ -10,7 +10,7 @@ const fixture=path.join(temp,'payload');
 const testHome=path.join(temp,'user');
 function make(p){fs.mkdirSync(p,{recursive:true});}
 try{
- for(const dir of ['installer','integrations/native-ui','server','vendor','ui'])make(path.join(fixture,dir));
+ for(const dir of ['installer','integrations/native-ui','server','vendor','ui','claude-plugin/skills/claudebridge','claude-plugin/.claude-plugin'])make(path.join(fixture,dir));
  fs.copyFileSync(path.join(source,'installer','setup.js'),path.join(fixture,'installer','setup.js'));
  fs.copyFileSync(process.execPath,path.join(fixture,'integrations/native-ui',process.platform==='win32'?'node.exe':'node'));
  fs.writeFileSync(path.join(fixture,'manifest.json'),'{"version":"2.5.0"}');
@@ -18,6 +18,8 @@ try{
  fs.writeFileSync(path.join(fixture,'integrations/native-ui','renderer.js'),'// test fixture');
  fs.writeFileSync(path.join(fixture,'ui','index.html'),'test');
  fs.writeFileSync(path.join(fixture,'vendor','dummy.js'),'test');
+ fs.copyFileSync(path.join(source,'claude-plugin','.claude-plugin','plugin.json'),path.join(fixture,'claude-plugin','.claude-plugin','plugin.json'));
+ fs.copyFileSync(path.join(source,'claude-plugin','skills','claudebridge','SKILL.md'),path.join(fixture,'claude-plugin','skills','claudebridge','SKILL.md'));
  const env={...process.env,CLAUDEBRIDGE_SETUP_TEST_HOME:testHome,CLAUDEBRIDGE_SETUP_SKIP_NATIVE:'1'};
  const cfg=path.join(testHome,'Claude','claude_desktop_config.json');
  make(path.dirname(cfg));
