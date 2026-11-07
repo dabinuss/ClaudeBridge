@@ -217,12 +217,12 @@ function uninstall(){
  if(!fs.existsSync(installPath)&&fs.existsSync(stateRoot)&&!isLink(stateRoot)){
   try{if(fs.readdirSync(stateRoot).length===0)fs.rmdirSync(stateRoot);}catch{}
  }
- log(JSON.stringify({ok:!residual&&(!dataPurge||dataPurge.skipped.length===0),mcpRemoved:changed,native:nativeResult,
+ log(JSON.stringify({ok:!residual&&!nativeResult?.error&&!nativeResult?.pendingCleanup&&(!dataPurge||dataPurge.skipped.length===0),mcpRemoved:changed,native:nativeResult,
   residual,projectMemoryPreserved:!dataPurge,purge:dataPurge,
   message:residual?'Close all ClaudeBridge processes and run uninstall again.':dataPurge?
     'ClaudeBridge removed and registered project memory cleanup attempted. Source projects preserved.':
     'ClaudeBridge MCP and native launcher removed; project memory preserved.'}));
- if(residual)process.exitCode=2;
+ if(residual||nativeResult?.error||nativeResult?.pendingCleanup||dataPurge?.skipped?.length)process.exitCode=2;
 }
 function status(){
  const current=fs.existsSync(installPath)&&fs.existsSync(marker);
