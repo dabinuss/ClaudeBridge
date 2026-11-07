@@ -23,7 +23,7 @@ try{
  manifest.compatibility=manifest.compatibility||{};
  manifest.compatibility.platforms=['win32','darwin','linux'];
  fs.writeFileSync(manifestFile,JSON.stringify(manifest,null,2)+'\n');
- const included=['manifest.json','server','ui','integrations','installer','maintenance'];
+ const included=['manifest.json','server','ui','integrations','installer','maintenance','claude-plugin'];
  for(const p of included)if(!fs.existsSync(path.join(work,p)))throw Error('Missing compiled core component '+p);
  const required=[
   'server/v2.js','server/db.js','server/worker.js','server/watchdog.js',
