@@ -146,10 +146,10 @@ function install(){
  const previouslyOwned=existingData.backupCreated===true;
  const configCreated=existingData.configCreated===true||!fs.existsSync(configPath);
  const backupExisted=fs.existsSync(backup);
- writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.6.0',installedAt:new Date().toISOString(),backupCreated:previouslyOwned,configCreated})+'\n');
+ writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.7.0',installedAt:new Date().toISOString(),backupCreated:previouslyOwned,configCreated})+'\n');
  configure('install');
  if(!backupExisted&&fs.existsSync(backup))
-  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.6.0',installedAt:new Date().toISOString(),backupCreated:true,configCreated})+'\n');
+  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.7.0',installedAt:new Date().toISOString(),backupCreated:true,configCreated})+'\n');
  // ClaudeBridge must work through the original Claude Desktop launcher.
  // The experimental CDP companion needs a second launcher and is not installed.
  const nativeResult={installed:false,skipped:true,
