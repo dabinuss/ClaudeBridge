@@ -253,7 +253,7 @@ jobs:
           if gh release view preview >/dev/null 2>&1; then
             gh release upload preview ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-* SHA256SUMS --clobber
           else
-            gh release create preview ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-* SHA256SUMS --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Experimental cross-platform desktop extensions. Codex CLI is bundled. One-time ChatGPT sign-in remains required." --prerelease
+            gh release create preview ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-* SHA256SUMS --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Lightweight SHA256-verified online installers for Windows, macOS and Linux. Node.js is downloaded from nodejs.org and Codex CLI from the official npm registry during setup. One-time ChatGPT sign-in required." --prerelease
           fi
           # Offline packages stay available as CI artifacts, not duplicate preview downloads.
           for obsolete in \
