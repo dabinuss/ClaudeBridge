@@ -1,50 +1,61 @@
-# ClaudeBridge v1.0.1 — Engineering audit
+# ClaudeBridge 2.0 — Stability, Security and Performance Audit
 
-Date: 2026-11-07  
-Scope: MCP server, subprocess launch, project state, extension manifest, tests, install UX.
+Date: 2026-11-07 · Status: Experimental preview
 
-## Method
+## Scope and evidence
 
-Manual source review of `server/index.js`, `manifest.json`, test suite, README and GitHub Actions. Mock Codex smoke tests and CI tests on Windows, macOS and Linux. **No live end-to-end test with a signed-in Claude Desktop and Codex CLI is claimed.** No formal penetration test was conducted.
+Reviewed the MCP bridge, project registry, detached Codex workers, SQLite storage, Codex-side message server, watchdog, packaging workflow and tests. Cross-platform CI uses simulated Codex events. **A complete authenticated Claude Desktop + Codex end-to-end test has not been conducted.** No external penetration test or formal security certification is claimed.
 
-## Findings and changes
+## Improvements in v2
 
-| Severity | Finding | Action |
-| --- | --- | --- |
-| Critical | Windows launch concatenated arguments into a `cmd.exe` command line. | Invoke the installed Codex JavaScript entrypoint via Node without a shell; reject unsupported batch launchers. |
-| High | Corrupted JSON task state was silently replaced with an empty object. | Fail fast on invalid task database instead of risking accidental overwrite. |
-| High | Task event output and project handoff notes could grow without a bound. | Cap log volume, task history, and handoff notes; limit MCP message size. |
-| High | Child process cleanup raced with Windows file locks in CI. | Wait for child exit and retry cleanup in smoke tests. |
-| Medium | Excessive synchronous JSON writes for command-start events. | Throttle activity updates to at most approximately once per 1.5 seconds per job. |
-| High | Unbounded concurrent read-only Codex jobs could exhaust processes and memory. | Allow no more than 3 concurrent Codex jobs and time out tasks after 45 minutes. |
-| Medium | Setup checks did not distinguish installation from login state. | Call `codex login status` in the health check and return actionable English setup guidance. |
-| Medium | Shell-dependent CLI resolution and repeated lookup. | Resolve Codex once and cache the discovered executable path. |
-| Medium | Poor onboarding for non-technical users. | English quick start and plain-language example prompts; diagnostic next steps. |
-| Medium | Codex session IDs accepted without validation. | Validate UUID-like session identifiers before passing them as process arguments. |
+| Area | Implemented change |
+| --- | --- |
+| Installation | Separate Windows, macOS and Linux desktop extension bundles including the official Codex CLI |
+| Account setup | One-time device login can be initiated from Claude, subject to user authorization |
+| Project management | Persistent local multi-project registry with real-path validation |
+| State consistency | SQLite in WAL mode with indexed task and message tables |
+| Concurrency | Limit of three running workers; writing tasks use Codex-managed Git worktrees by default |
+| Context preservation | Project messages, checkpoints, session IDs, heartbeat and final task output |
+| Agent collaboration | Separate project-scoped Codex MCP inbox with read, send and checkpoint tools |
+| Failure detection | Independent watchdog watches worker heartbeats and marks dead workers as interrupted |
+| Runtime limits | Each worker has a 45-minute task timeout; raw events are capped |
+| Windows security | CLI execution via argument arrays without cmd.exe shell concatenation |
+| Privacy | Project state under .agent-bridge; internal .gitignore protects accidental source commits |
+| Review safety | Read-only sandbox is requested for fresh and resumed review tasks |
+| Usability | Claude uses MCP tools through normal conversational requests |
+| Verification | Legacy MCP smoke tests, v2 integration tests and mailbox tests in CI |
 
-## Known limitations / remaining risks
+## Remaining limitations and risks
 
-1. **Claude Desktop lifecycle:** the MCP server is not an independent always-on daemon. Unstarted tasks cannot be delegated when Claude is no longer available; ongoing jobs depend on the host keeping the bridge alive.
-2. **Project path:** a single extension instance targets one local project directory; Claude Projects conversation folders are not automatically mapped to local folders.
-3. **Shared-workspace writes:** there is no enforced path ownership or Git worktree isolation; coordinating concurrent file edits is still the user's and agents' responsibility.
-4. **Multiple server instances:** task state is stored in a project-local JSON file with atomic rename, but there is no inter-process transaction lock. Two independent ClaudeBridge instances pointing to the same project may overwrite each other's changes.
-5. **Process recovery:** after a restart, old `running` tasks become `interrupted`. This does not confirm whether an orphaned Codex process is still alive.
-6. **Authentication:** availability checks detect an installed Codex launcher, not whether its login has expired. Actual authentication is verified by a real task.
-7. **Windows environments:** some atypical package-manager shims or custom `CODEX_BIN` configurations may need additional discovery support.
-8. **Permissions:** Codex may execute project code in code mode. Review mode uses the CLI read-only sandbox, but the bridge cannot independently prove every platform sandbox policy.
-9. **Runtime performance:** task metadata is stored as JSON, so progress updates still have synchronous disk I/O. Large projects or thousands of jobs would benefit from SQLite.
-10. **No full context mirroring:** Claude's hidden model context and unrelated Project threads are not accessible to this extension.
+1. **No native UI injection.** MCP desktop extensions cannot add arbitrary Claude chat controls. Tool use is triggered through ordinary Claude conversation.
+2. **No Claude quota event.** Claude subscription exhaustion does not generate a supported MCP handover signal. The independent worker can finish an already-started task, but cannot force Claude to send new instructions.
+3. **Account consent.** ChatGPT OAuth/device login requires the user's action. Account tokens must never be copied into the project database.
+4. **Node version.** SQLite relies on the Node.js 22.13+ built-in module. Runtime compatibility with every Claude Desktop build is not proven.
+5. **Agent messages are pull-based.** Codex must invoke the mailbox MCP tool to read newly arrived messages. Arrival does not automatically interrupt a model's current turn.
+6. **Git worktree integration remains manual.** Codex manages its worktree, but there is no unattended cherry-pick or merge; the user/Claude must inspect results.
+7. **No exact model-context transfer.** Saved files, messages, and Codex sessions do not reproduce Claude's hidden context or unrelated Claude Projects threads.
+8. **Daemon persistence is bounded.** Workers and the short-lived watchdog are independent of MCP server lifetime; machine restart still interrupts them.
+9. **Session resume may fail.** Invalid or expired sessions, worktree mismatch, or CLI-version changes may prevent continuation. The bridge preserves the error and past state.
+10. **No proof of sandbox containment.** The bridge selects Codex sandbox flags; actual filesystem enforcement depends on the OS and CLI version.
+11. **No external audit or code signing.** Installer artifacts are built in GitHub Actions; signed reproducible releases and external pentesting are still future work.
+12. **Project registry scope.** Selecting a project affects the local Bridge instance. It does not automatically detect Claude Projects identity, which the MCP extension cannot access.
 
-## Further recommended improvements
+## Performance considerations
 
-- Independent watchdog and explicit process liveness tracking.
-- Transaction-safe task database (SQLite or proper cross-process locks).
-- Git worktrees for independent coding tasks, plus merge review.
-- Automatic project discovery or per-call project selection with explicit trust approval.
-- First-run diagnostic wizard that verifies Codex login and supported CLI options.
-- Tests for corrupted state, symlinked directories, concurrent processes, cancellation, retries, and malformed or oversized JSON.
-- Signed release artifacts, dependency review, and external security testing.
+- SQLite WAL handles independent task workers better than rewriting a shared JSON state file.
+- Task and message listings are bounded. The project message history is retained up to 2,000 records.
+- One process per Codex task has measurable memory overhead; the three-worker limit prevents unbounded growth.
+- Each worker writes a heartbeat every five seconds, while the watchdog checks independently every fifteen seconds.
+- Actual CPU, memory and throughput benchmarks with a live Codex subscription have not yet been conducted.
 
-## Test status
+## Recommended validation before stable release
 
-The repository uses GitHub Actions with Node.js 22 across Windows, macOS and Linux, and packages a `.mcpb` artifact. CI success is a useful regression signal, but is not a substitute for real account-based integration testing.
+- Test the bundled install and login on clean Windows, macOS and Linux installations.
+- Run real dual-agent workflows on Git repositories with overlapping and independent file changes.
+- Verify Codex worktree merge/review behavior and session restoration after forced termination.
+- Fuzz MCP requests and project paths, test symlink/sandbox boundaries, cancellation and password/token leakage.
+- Pin and attest downloadable Codex and extension dependencies; commission an independent security review.
+
+## Testing
+
+GitHub Actions executes `node tests/smoke.js`, `node tests/v2.js`, and `node tests/mailbox.js`, along with syntax checks and a bundled Codex executable check, across three operating systems. CI success verifies those cases only.
