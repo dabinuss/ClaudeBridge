@@ -24,5 +24,10 @@ button{cursor:pointer}button:disabled{opacity:.4;cursor:default}
 <div class="row"><strong>ChatGPT sign-in</strong><span class="status" id="loginStatus">Checking…</span></div>
 <div class="actions"><button id="installBtn" hidden>Install / Repair Codex</button><button id="loginBtn">Connect ChatGPT</button><button id="refreshBtn">Refresh status</button></div>
 </div>
+<div class="section">
+<div class="row"><strong>Original Claude model menu</strong><span class="status" id="nativeStatus">Checking…</span></div>
+<small>Optional Windows integration. Keeps ClaudeBridge MCP and normal Claude models unchanged.</small>
+<div class="actions"><button id="nativeInstallBtn">Enable in model menu</button><button id="nativeRemoveBtn">Remove integration</button></div>
+</div>
 <div id="msg" aria-live="polite"></div>
 <script>/*__CLAUDEBRIDGE_APP_BUNDLE__*/</script></body></html>
