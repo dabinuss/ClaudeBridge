@@ -57,6 +57,13 @@ try{
  make(shared);
  fs.writeFileSync(path.join(shared,'settings.json'),'{"mode":"dual"}');
  fs.writeFileSync(path.join(shared,'projects.json'),JSON.stringify({active:'project',projects:{project:{name:'Project',path:project}}}));
+ // Locked native integration must never leave a broken launcher by removing shared Node first.
+ const blocked=spawnSync(process.execPath,[path.join(fixture,'installer','setup.js'),'uninstall'],{
+  env:{...env,CLAUDEBRIDGE_TEST_NATIVE_BUSY:'1'},encoding:'utf8',timeout:25000
+ });
+ assert.equal(blocked.status,2,'Busy companion must block uninstall');
+ assert(fs.existsSync(path.join(testHome,'Installed','installer-owned.json')),'Shared runtime was removed prematurely');
+ assert.equal(call('status').mcpOwned,true,'MCP registration should remain intact');
  const purged=call('uninstall',0,['--purge-data']);
  assert.equal(purged.projectMemoryPreserved,false);
  assert(!fs.existsSync(mem),'Bridge memory was not removed');
