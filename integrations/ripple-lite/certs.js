@@ -27,7 +27,7 @@ function createIdentity(dir,{execute=run,days=180}={}){
   create(['req','-new','-sha256','-key',p.leaf_key,'-out',p.leaf_csr,
     '-subj','/CN=claude.ai']);
   fs.writeFileSync(p.leaf_ext,[
-    'subjectAltName=DNS:claude.ai,DNS:*.claude.ai',
+    'subjectAltName=DNS:claude.ai,DNS:*.claude.ai,DNS:api.anthropic.com',
     'basicConstraints=critical,CA:FALSE',
     'keyUsage=critical,digitalSignature,keyEncipherment',
     'extendedKeyUsage=serverAuth'
