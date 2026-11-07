@@ -103,6 +103,10 @@ jobs:
         if: matrix.platform == 'win32'
         shell: pwsh
         run: ./tests/native-install.ps1
+      - name: Verify reversible Windows cleanup
+        if: matrix.platform == 'win32'
+        shell: pwsh
+        run: ./tests/cleanup.ps1
       - name: Bundle ClaudeBridge Extension
         shell: pwsh
         run: |
