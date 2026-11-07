@@ -71,8 +71,20 @@ if($Action -eq "remove") {
   foreach($item in @($link,$desktopLink)) {
     if(Test-Path $item) { Remove-Item -LiteralPath $item -Force }
   }
-  if(Test-Path $base) { Remove-Item -LiteralPath $base -Recurse -Force }
-  Write-Output '{"installed":false,"message":"Native picker launcher removed. ClaudeBridge MCP was not modified."}'
+  $pendingCleanup = $false
+  if(Test-Path $base) {
+    try { Remove-Item -LiteralPath $base -Recurse -Force -ErrorAction Stop }
+    catch { $pendingCleanup = $true } # Windows keeps the active node.exe locked until Claude exits.
+  }
+  [PSCustomObject]@{
+    installed = $false
+    pendingCleanup = $pendingCleanup
+    message = if($pendingCleanup) {
+      "Native picker shortcuts were removed. Quit Claude Desktop to release locked companion files; remove the leftover NativePicker directory afterward. MCP remains unchanged."
+    } else {
+      "Native picker launcher removed. ClaudeBridge MCP was not modified."
+    }
+  } | ConvertTo-Json -Compress
   exit 0
 }
 if(!$ExtensionRoot -or !(Test-Path $ExtensionRoot)) {
