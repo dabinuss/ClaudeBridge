@@ -10,7 +10,7 @@ async function main(){
  const installed=process.argv[3]||path.resolve(__dirname,'../..');
  if(action==='status'){process.stdout.write(JSON.stringify(lifecycle.status())+'\n');return;}
  if(action==='disable'){
-  const answer=lifecycle.disable({installed});
+  const answer=await lifecycle.disable({installed});
   process.stdout.write(JSON.stringify(answer)+'\n');return;
  }
  if(action!=='enable')throw Error('Usage: activate.js enable | disable | status');
