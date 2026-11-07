@@ -90,7 +90,7 @@ jobs:
       - name: Test one-file installer config registration
         run: node tests/standalone-setup.js
       - name: Bundle Codex CLI runtime
-        run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0
+        run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 node-forge@1.4.3
       - name: Install build-only dependencies
         run: npm install --prefix .builddeps --no-audit --no-fund --no-save @modelcontextprotocol/ext-apps@1.1.2 esbuild@0.25.12 @anthropic-ai/mcpb jsdom@26.1.0
       - name: Build bundled MCP Apps browser UI
