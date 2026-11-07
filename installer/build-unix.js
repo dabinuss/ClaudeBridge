@@ -11,7 +11,7 @@ if(!template.endsWith('\n')||!template.includes('__PAYLOAD_LINE__'))throw Error(
 const offset=template.split('\n').length;
 const prefix=template.replace('__PAYLOAD_LINE__',String(offset));
 const archive=path.join(base,'.builddeps','ClaudeBridge-standalone-payload.tar.gz');
-const entries=['manifest.json','server','vendor','ui','integrations','installer','maintenance'];
+const entries=['manifest.json','server','vendor','ui','integrations','installer','maintenance','claude-plugin'];
 fs.mkdirSync(path.dirname(archive),{recursive:true});
 const result=spawnSync('tar',['-czf',archive,...entries],{cwd:base,stdio:'inherit',timeout:180000});
 if(result.status!==0)throw Error('Cannot create installer archive');
