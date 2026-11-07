@@ -8,6 +8,28 @@ case "${1:-}" in
   ""|--install|install) MODE=install ;;
   *) echo "Usage: $0 [--install|--uninstall|--status]" >&2; exit 2 ;;
 esac
+if [ "$#" -eq 0 ]; then
+  case "$(uname -s)" in
+    Darwin) INSTALLED="$HOME/Library/Application Support/ClaudeBridge/Installed/installer-owned.json" ;;
+    Linux) INSTALLED="$HOME/.local/share/claudebridge/Installed/installer-owned.json" ;;
+    *) INSTALLED="" ;;
+  esac
+  if [ -n "$INSTALLED" ] && [ -f "$INSTALLED" ]; then
+    echo "ClaudeBridge is installed."
+    echo "1) Update / Repair"
+    echo "2) Uninstall"
+    echo "3) Cancel"
+    printf "Select [1-3]: "
+    read -r CHOICE
+    case "$CHOICE" in
+      1) MODE=install ;;
+      2) MODE=uninstall ;;
+      *) exit 0 ;;
+    esac
+  else
+    echo "Installing ClaudeBridge MCP and native model-menu controls..."
+  fi
+fi
 case "$(uname -s)" in
   Darwin|Linux) ;;
   *) echo "This installer is for macOS and Linux only." >&2; exit 2 ;;
