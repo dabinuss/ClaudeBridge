@@ -84,6 +84,15 @@ if($Action -eq "remove") {
     try { Remove-Item -LiteralPath $base -Recurse -Force -ErrorAction Stop }
     catch { $pendingCleanup = $true } # Windows keeps the active node.exe locked until Claude exits.
   }
+  if(!$pendingCleanup -and !$testing) {
+    $parentDir = Split-Path $base -Parent
+    if(Test-Path -LiteralPath $parentDir) {
+      $children = @(Get-ChildItem -LiteralPath $parentDir -Force -ErrorAction SilentlyContinue)
+      if($children.Count -eq 0) {
+        try { Remove-Item -LiteralPath $parentDir -Force -ErrorAction Stop } catch {}
+      }
+    }
+  }
   [PSCustomObject]@{
     installed = $false
     pendingCleanup = $pendingCleanup
