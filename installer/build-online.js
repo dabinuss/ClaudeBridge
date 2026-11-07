@@ -33,7 +33,8 @@ try{
   'integrations/native-ui/companion.js','integrations/native-ui/cdp.js',
   'integrations/native-ui/renderer.js','integrations/native-ui/setup-unix.js',
   'integrations/native-ui/install.ps1','integrations/native-ui/launcher.vbs',
-  'installer/setup.js','installer/online-deps.js'
+  'installer/setup.js','installer/online-deps.js',
+  'claude-plugin/.claude-plugin/plugin.json','claude-plugin/skills/claudebridge/SKILL.md'
  ];
  for(const relative of required){
   const file=path.join(work,relative);
