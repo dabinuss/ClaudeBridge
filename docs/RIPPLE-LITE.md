@@ -1,6 +1,6 @@
 # ClaudeBridge Ripple-lite research and prototype
 
-The module `integrations/ripple-lite/bootstrap.js` is an independent bootstrap-list adapter, not a proxy, installer, or functional model routing implementation.
+The module `integrations/ripple-lite/bootstrap.js` is an independent bootstrap-list adapter. `integrations/ripple-lite/transform.js` transforms only recognized bootstrap JSON responses (including gzip/br/deflate) and fails closed on unknown data. `integrations/ripple-lite/transport.js` provides a loopback-only, byte-transparent CONNECT proxy. Together these are testable components, **not yet a fully integrated TLS interception proxy, installer or model request router**.
 
 ## Confirmed boundary
 
@@ -20,4 +20,6 @@ Reference implementation studied: https://github.com/PBJ-2/clauderipple/blob/mai
 
 No patched Claude app, separate launcher, or globally installed Node is required by the intended architecture; a small local proxy process would be required while the feature is enabled.
 
-Run: `node tests/ripple-lite.js`.
+Run: `node tests/ripple-lite.js`, `node tests/ripple-transport.js`, and `node tests/ripple-transform.js`.
+
+Do not ship a user-facing installer claiming native chat-picker or active model routing based solely on these adapter/transport tests. Actual integration needs authenticated end-to-end Desktop checks and independent assessment of certificate trust and rollback.
