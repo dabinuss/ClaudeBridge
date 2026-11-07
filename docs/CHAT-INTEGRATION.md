@@ -13,7 +13,7 @@
 
 The files under `claude-plugin/` contain a valid Claude plugin with a `claudebridge` skill. Plugins and skills can work in ordinary Claude Chat; however, Claude requires **user-authorized account-level installation**. Merely placing files on disk does not install a skill into your Claude account.
 
-If desired, package `claude-plugin/` as a .plugin archive and import it using Claude's **Customize → Plugins** interface. It will guide Claude's use of the installed MCP tools. This step is **optional**; the local ClaudeBridge MCP server is already usable without it. Do not install a plugin's local MCP server as a replacement in Chat: Anthropic restricts bundled local plugin-MCP execution there.
+If desired, package `claude-plugin/` as a .plugin archive and import it through Claude's **Plugins** interface (formerly Customize → Plugins). The package includes supported slash-menu commands `/bridge`, `/bridge-login` and `/bridge-dual`, accessible via the chat's `/` or `+` menu after user-authorized plugin installation. These commands guide Claude's use of the installed MCP tools; they **do not inject controls into the native model selector**. This step is **optional**; the local ClaudeBridge MCP server is already usable without it. Do not install a plugin's local MCP server as a replacement in Chat: Anthropic restricts bundled local plugin-MCP execution there.
 
 ## Hard boundary: original Chat model picker
 
