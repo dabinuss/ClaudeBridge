@@ -59,14 +59,14 @@ if(!$ExtensionRoot -or !(Test-Path $ExtensionRoot)) {
   throw "An existing ClaudeBridge extension directory must be supplied."
 }
 $source = Join-Path $ExtensionRoot "integrations\native-ui"
-foreach($name in @("companion.js","renderer.js","node.exe")) {
+foreach($name in @("companion.js","renderer.js","cdp.js","node.exe")) {
   if(!(Test-Path (Join-Path $source $name))) { throw "Missing native launcher component: $name" }
 }
 $settings = Join-Path $ExtensionRoot "server\settings.js"
 if(!(Test-Path $settings)) { throw "ClaudeBridge settings module missing." }
 $claudeExe = Get-ClaudeExe
 New-Item -ItemType Directory -Path $base -Force | Out-Null
-foreach($name in @("companion.js","renderer.js","node.exe")) {
+foreach($name in @("companion.js","renderer.js","cdp.js","node.exe")) {
   Copy-Item -LiteralPath (Join-Path $source $name) -Destination (Join-Path $base $name) -Force
 }
 Copy-Item -LiteralPath $settings -Destination (Join-Path $base "settings.js") -Force
