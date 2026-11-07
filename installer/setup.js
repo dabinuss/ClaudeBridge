@@ -146,10 +146,10 @@ function install(){
  const previouslyOwned=existingData.backupCreated===true;
  const configCreated=existingData.configCreated===true||!fs.existsSync(configPath);
  const backupExisted=fs.existsSync(backup);
- writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.5.0',installedAt:new Date().toISOString(),backupCreated:previouslyOwned,configCreated})+'\n');
+ writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.6.0',installedAt:new Date().toISOString(),backupCreated:previouslyOwned,configCreated})+'\n');
  configure('install');
  if(!backupExisted&&fs.existsSync(backup))
-  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.5.0',installedAt:new Date().toISOString(),backupCreated:true,configCreated})+'\n');
+  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.6.0',installedAt:new Date().toISOString(),backupCreated:true,configCreated})+'\n');
  let nativeResult={};
  try{nativeResult=native('install');}
  catch(e){nativeResult={installed:false,error:e.message};}
