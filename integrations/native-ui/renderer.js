@@ -91,16 +91,39 @@
    root.querySelector('.cb-message').textContent=String(e.message||e);
   });
  }
+ // Only attach to a populated model-choice popup. Never search arbitrary dialogs,
+ // message text, projects, or settings pages for model names.
+ const modelName=/\b(opus|sonnet|haiku)\b/i;
+ const choiceSelector='[role="menuitemradio"],[role="menuitem"],[role="option"]';
+ function visible(el){
+  if(!el.isConnected||el.closest('[hidden],[aria-hidden="true"],[inert]'))return false;
+  const style=window.getComputedStyle(el);
+  return style.display!=='none'&&style.visibility!=='hidden'&&el.getClientRects().length>0;
+ }
  function looksLikeModelMenu(el){
+  if(!visible(el)||el.hasAttribute(marker))return false;
   const role=el.getAttribute('role');
-  if(!['menu','listbox','dialog'].includes(role)&&!el.matches('[data-radix-popper-content-wrapper]'))return false;
-  const sample=(el.textContent||'').slice(0,1800);
-  return /\b(opus|sonnet|haiku|model)\b/i.test(sample)&&
-    el.querySelectorAll('[role="menuitem"],[role="option"],[role="menuitemradio"],button').length>=2;
+  if(role!=='menu'&&role!=='listbox')return false;
+  if(el.closest('['+marker+']'))return false;
+  const choices=[...el.querySelectorAll(choiceSelector)].filter(choice=>
+   visible(choice)&&!choice.closest('['+marker+']'));
+  if(choices.length<2)return false;
+  const modelChoices=choices.filter(choice=>modelName.test((choice.textContent||'').slice(0,140)));
+  if(modelChoices.length<2)return false;
+  // At least two different Claude model families must be present.
+  const families=new Set(modelChoices.flatMap(choice=>
+   ((choice.textContent||'').match(/\b(opus|sonnet|haiku)\b/gi)||[])
+    .map(name=>name.toLowerCase())));
+  if(families.size<2)return false;
+  // Refuse ambiguous nested popups.
+  if(el.querySelector('[role="menu"],[role="listbox"]'))return false;
+  return true;
  }
  function scan(){
-  document.querySelectorAll('[role=menu],[role=listbox],[role=dialog],[data-radix-popper-content-wrapper]').forEach(el=>{
-   try{if(looksLikeModelMenu(el))attach(el);}catch{}
+  document.querySelectorAll('[role="menu"],[role="listbox"]').forEach(el=>{
+   try{if(looksLikeModelMenu(el))attach(el);}catch(error){
+    console.warn('[ClaudeBridge] Model picker detection failed:',error.message);
+   }
   });
  }
  let scheduled=false,frameId=null;

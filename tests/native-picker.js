@@ -8,6 +8,10 @@ async function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 const html='<html><head></head><body><div id="other" role="menu"><button role="menuitem">Settings</button><button role="menuitem">Help</button></div><div id="models" role="menu"><button role="menuitem">Claude Opus</button><button role="menuitem">Claude Sonnet</button></div></body></html>';
 const dom=new JSDOM(html,{url:'https://claude.ai',runScripts:'dangerously',pretendToBeVisual:true});
 const win=dom.window;
+// jsdom has no layout engine; emulate nonzero layout rectangles for visible fixtures.
+win.HTMLElement.prototype.getClientRects=function(){
+ return this.hasAttribute('hidden')||this.getAttribute('aria-hidden')==='true'?[]:[{width:120,height:24}];
+};
 let mode='manual',login='signed_in',requests=0;
 win.__claudebridgeHost=(raw)=>{
  const req=JSON.parse(raw);requests++;
