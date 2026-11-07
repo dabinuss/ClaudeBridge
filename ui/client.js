@@ -1,7 +1,7 @@
 import { App } from '@modelcontextprotocol/ext-apps';
 const explanation={off:'Codex is disabled. Project notes remain stored.',manual:'Claude delegates tasks on request.',fallback:'Handoff when a limit is confirmed or you request it. Automatic Claude quota detection is not available.',dual:'Claude and Codex may work concurrently on separate tasks.'};
 const $=id=>document.getElementById(id);
-const app=new App({name:'ClaudeBridge Settings',version:'2.2.1'},{});
+const app=new App({name:'ClaudeBridge Settings',version:'2.3.0'},{});
 async function call(name,args){
  const result=await app.callServerTool({name,arguments:args});
  if(result?.isError)throw Error(result.content?.[0]?.text||'Tool failed');
