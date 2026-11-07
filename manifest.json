@@ -2,9 +2,9 @@
   "manifest_version": "0.3",
   "name": "claudebridge",
   "display_name": "ClaudeBridge",
-  "version": "2.2.1",
-  "description": "ClaudeBridge: Claude/Codex modes, an in-chat control panel, project memory, plans and parallel work.",
-  "long_description": "MCP-first Claude and Codex coordination. An interactive in-chat control panel provides Off, Manual, Fallback and Dual modes plus Codex installation and sign-in status. Built-in project memory, plans, task state and bundled Codex CLI.",
+  "version": "2.3.0",
+  "description": "ClaudeBridge: optional native Claude model-menu controls, Codex authentication, dual agents, and project memory.",
+  "long_description": "Integrate Claude and Codex from the original Claude Desktop interface. Keep the MCP extension, use optional Windows native model-picker controls through a local debugging pipe, and configure Off, On Demand, Fallback and Dual modes. Includes Codex CLI and persistent project memory.",
   "author": {
     "name": "ClaudeBridge contributors"
   },
@@ -37,6 +37,10 @@
     {
       "name": "bridge_settings",
       "description": "Persist Off, Manual, Fallback, Dual modes and working memory settings."
+    },
+    {
+      "name": "bridge_native_picker",
+      "description": "Install, inspect or remove optional Windows native Claude model-menu controls without changing MCP."
     },
     {
       "name": "bridge_health",
