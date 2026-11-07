@@ -2,8 +2,8 @@
   "manifest_version": "0.3",
   "name": "claudebridge",
   "display_name": "ClaudeBridge",
-  "version": "2.0.0",
-  "description": "Coordinate Claude and Codex naturally: multiple projects, isolated parallel tasks, persistent messages and recovery.",
+  "version": "2.1.0",
+  "description": "Connect Claude and Codex with project memory, preserved user requests, versioned plans and parallel coding.",
   "long_description": "ClaudeBridge connects Codex CLI to Claude Desktop through MCP. Includes a bundled Codex CLI, supports multiple local projects, durable SQLite state, safe Git worktrees, independent tasks and plain-language operation. One-time ChatGPT sign-in is still required.",
   "author": {
     "name": "ClaudeBridge contributors"
@@ -41,6 +41,14 @@
     {
       "name": "bridge_delegate",
       "description": "Delegate parallel Codex coding or read-only reviews."
+    },
+    {
+      "name": "bridge_plan",
+      "description": "Record original user prompts, proposed plans, approval, revisions and plan history."
+    },
+    {
+      "name": "bridge_memory",
+      "description": "View timestamped local project changes and a compact handoff snapshot."
     },
     {
       "name": "bridge_status",
