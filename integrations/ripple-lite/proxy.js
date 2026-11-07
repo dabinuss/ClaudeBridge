@@ -57,7 +57,7 @@ function makePickerProxy({dir,host='127.0.0.1',port=0,models=[],upstream='claude
        chunks.push(chunk);
      });
      upstreamRes.on('end',()=>{
-       const transformed=transformBootstrap({pathname:path,body:Buffer.concat(chunks),headers:responseHeaders,models});
+       const transformed=transformBootstrap({pathname:path,body:Buffer.concat(chunks),headers:responseHeaders,models:typeof models==='function'?models():models});
        if(transformed.changed)counters.changed++;
        res.writeHead(upstreamRes.statusCode||502,transformed.headers);
        res.end(transformed.body);
