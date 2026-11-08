@@ -12,7 +12,8 @@ try{
  const label=process.platform==='win32'?'Windows':process.platform==='darwin'?'macOS':'Linux';
  const r=spawnSync('unzip',['-q',path.join(root,'ClaudeBridge-'+label+'.mcpb'),'-d',work],{encoding:'utf8',timeout:45000});
  if(r.status!==0)throw Error('Could not unpack compiled MCPB core: '+r.stderr);
- for(const relative of ['integrations/native-ui/node','integrations/native-ui/node.exe','vendor']){
+ for(const relative of ['integrations/native-ui/node','integrations/native-ui/node.exe','vendor','integrations/ripple-lite']){
+  // Ripple MITM is retired from the compact installer, not just disabled.
   fs.rmSync(path.join(work,relative),{force:true,recursive:true});
  }
  // Keep only source + compiled MCP Apps UI; never package Codex or Node in the tiny core.
@@ -34,12 +35,6 @@ try{
   'integrations/native-ui/renderer.js','integrations/native-ui/setup-unix.js',
   'integrations/native-ui/install.ps1','integrations/native-ui/launcher.vbs',
   'installer/setup.js','installer/online-deps.js',
-  'integrations/ripple-lite/proxy.js','integrations/ripple-lite/daemon.js',
-  'integrations/ripple-lite/lifecycle.js','integrations/ripple-lite/activate.js',
-  'integrations/ripple-lite/certs.js','integrations/ripple-lite/trust.js',
-  'integrations/ripple-lite/service.js','integrations/ripple-lite/desktop-config.js',
-  'integrations/ripple-lite/chat-rpc.js','integrations/ripple-lite/html-inject.js',
-  'integrations/ripple-lite/codex-model.js',
   'integrations/mod/settings-cli.js',
   'claude-plugin/hooks/hooks.json','claude-plugin/hooks/claudebridge.mjs',
   'claude-plugin/.claude-plugin/plugin.json','claude-plugin/skills/claudebridge/SKILL.md',
