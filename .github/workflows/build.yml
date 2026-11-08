@@ -65,6 +65,7 @@ jobs:
           node --check installer/build-online.js
           node --check claude-plugin/hooks/claudebridge.mjs
           node --check integrations/mod/settings-cli.js
+          node --check installer/mod-install.js
       - name: Run legacy smoke tests
         run: node tests/smoke.js
       - name: Run v2 smoke tests
@@ -77,6 +78,8 @@ jobs:
         run: node tests/plans.js
       - name: Test official Claude Code Mod and proxy-free setup
         run: node tests/claude-mod.js
+      - name: Test official Claude Code plugin activation
+        run: node tests/mod-installer.js
       - name: Test settings and picker adapter
         shell: bash
         run: |
