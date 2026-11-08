@@ -2,9 +2,9 @@
 
 **Use Claude Desktop and Codex CLI together through ordinary Claude conversations. No slash commands required.**
 
-![Version](https://img.shields.io/badge/version-2.7.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
+![Version](https://img.shields.io/badge/version-2.8.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
 
-> Preview: ClaudeBridge's Ripple-Lite integration inserts bridge-mode controls into the **normal Claude Desktop Chat model menu** through a user-scoped HTTPS proxy and guarded DOM script. It uses the original Claude shortcut and leaves the application package untouched. CI tests succeed; compatibility with a real signed-in Claude Desktop installation remains unverified.
+> Preview: ClaudeBridge integrates with the normal Claude Desktop client as MCP. Its official Claude Code Mod provides a visible `◈ ClaudeBridge ▾` control **above the prompt in the local Code tab**, not in the global app header. No HTTPS proxy, CA certificate, client patch, or separate launcher is installed by default.
 
 ## Small online setup (recommended)
 
@@ -20,11 +20,11 @@
 
 1. **ClaudeBridge's own application is already embedded in the installer** (MCP backend, complete UI, desktop companion and setup/removal scripts). No GitHub source or core archive is downloaded during installation.
 2. A **pinned Node.js LTS runtime**, downloaded directly from https://nodejs.org and checked against its SHA-256 manifest. It is used **privately by ClaudeBridge**, with no global PATH changes.
-3. **Codex CLI 0.167.0 and node-forge 1.4.3**, installed into ClaudeBridge's private `vendor` directory from the official npm registry with integrity verification and no global packages. The small node-forge package generates the local TLS certificates without requiring OpenSSL.
+3. **Codex CLI 0.167.0** installed privately from npm. No certificate-generation library is downloaded for the new proxy-free setup.nstalled into ClaudeBridge's private `vendor` directory from the official npm registry with integrity verification and no global packages. The small node-forge package generates the local TLS certificates without requiring OpenSSL.
 
 All ClaudeBridge-owned code is downloaded upfront inside the small installer. The additional program files are transferred **during setup**, so internet access is required. This changes the *installer download size*, not necessarily the final amount of installed data.
 
-The installer registers the `claudebridge` MCP server and offers one-time **Ripple-Lite activation**, which displays the local CA fingerprint and asks for explicit approval. If accepted, it installs one per-user certificate, a small user-level autostart proxy and a reversible Claude-managed proxy entry. It **never modifies Claude's executable or creates a second launcher**. Existing proxy settings are saved for restoration.
+The installer registers the `claudebridge` MCP server without installing a proxy, local CA, or alternative launcher. When upgrading a previously active Ripple-Lite installation, it attempts to restore the previous Claude proxy configuration and remove the user-trusted CA before declaring success.
 
 **To update or uninstall**, start **the same file** again. Existing private Node.js and ClaudeBridge files are reused for uninstall, so removing ClaudeBridge does not require redownloading the application. You may keep or explicitly delete saved plans and project memory; your project source code is never deleted.
 
@@ -34,7 +34,7 @@ The large fully-offline installers remain available through GitHub Actions build
 
 ## ClaudeBridge control panel inside Claude
 
-ClaudeBridge 2.7.0 includes an interactive **MCP Apps** control panel without replacing the MCP bridge. In your Claude conversation, ask:
+ClaudeBridge 2.8.0 includes an interactive **MCP Apps** control panel without replacing the MCP bridge. In your Claude conversation, ask:
 
 > **Open ClaudeBridge settings.**
 
@@ -49,20 +49,18 @@ When your Claude Desktop build supports local MCP Apps rendering, the panel appe
 
 The same settings are available to Claude as MCP tools through normal-language requests. No slash commands are needed.
 
-## Normal Claude Chat model menu — Ripple-Lite preview
+## Official Claude Code Mod — no proxy
 
-The installer can enable user-scoped HTTPS interception so the original Claude Desktop client loads a ClaudeBridge UI script from its own `claude.ai` origin. The script uses the existing model dropdown DOM to add **Off / On demand / Fallback / Dual agents**, Codex status and sign-in. The existing Claude model remains selected. This UI controls MCP delegation settings; it does not substitute a Claude model or route normal claude.ai chat requests to the Codex CLI.
+The bundled plugin includes a real Claude Code Mods hooks module at `claude-plugin/hooks/claudebridge.mjs`, registered in `claude-plugin/hooks/hooks.json`. It draws **◈ ClaudeBridge ▾** and the Off / On demand / Fallback / Dual agent buttons in the native **AbovePrompt** UI of local Claude Code sessions. Clicking a mode runs the private `integrations/mod/settings-cli.js`, which updates the same `~/.claudebridge/settings.json` used by MCP tasks. It preserves UI rendered by other mods.
 
-The implementation includes scoped bootstrap response rewriting for the Code tab, and a separate **text-only** Codex model API bridge. Claude Code tool calls are not implemented by the direct route and are deliberately rejected. For full code delegation use the existing ClaudeBridge MCP tools and worker.
+The official Mod API currently **does not expose the global Claude Desktop header** beside the project title (such as `MemeWars`), nor the normal Chat model selector. It cannot put the control at precisely that screenshot location. The Code-tab AbovePrompt band is the closest **supported** native drawing surface. We will not use HTTPS interception, certificate trust, patching, or an alternate launcher as an implicit workaround.
 
-A trusted user-local CA and a lightweight proxy process are required. The original Claude start icon is unchanged and older CDP launchers are not installed. The integration fails closed if the current Chat CSP or model menu structure does not match supported anchors.
-
-**Real signed-in Claude Desktop compatibility is still unverified** despite passing synthetic HTTPS, DOM, installer and OS tests. See [Ripple-Lite architecture and limitations](docs/RIPPLE-LITE.md).
+The installer bundles the Mod source alongside the MCP plugin; **installing the MCP server alone does not automatically enable a Claude Code plugin**. In a local Claude Code session, use the supported plugin manager to load `claude-plugin` or test the folder via `claude --plugin-dir <installed ClaudeBridge path>/claude-plugin`. After loading, the control appears where Mods draw UI, not in the app-level title bar.
 
 ## First use in the normal Claude Desktop app
 
-1. Run the compact **ClaudeBridge-Setup** installer. All Bridge scripts are embedded. Node.js, Codex CLI and node-forge are downloaded privately on demand. Approve the displayed local CA fingerprint if you want the native Chat menu.
-2. Restart **Claude Desktop using its original icon**. ClaudeBridge remains registered as MCP, and the enabled Ripple-Lite proxy attempts to insert its controls in the normal Chat model menu.
+1. Run the compact **ClaudeBridge-Setup** installer. All Bridge scripts are embedded. Node.js, Codex CLI and node-forge are downloaded privately on demand. No certificate approval is needed in the new setup.
+2. Restart **Claude Desktop using its original icon**. ClaudeBridge remains registered as MCP, and the optional Claude Code Mod can show its controls above the prompt in local Code sessions once the plugin is loaded.
 3. Ask Claude: **“Check ClaudeBridge, select my local code project and connect Codex if necessary.”** If Codex is already signed in, the existing account is used; otherwise approve one-time device sign-in.
 
 Examples: **“Open ClaudeBridge settings”**, **“Ask Codex to review my code”**, **“Let Codex write tests while we work on the UI”**, **“What is Codex doing?”**.
@@ -125,14 +123,14 @@ For advanced/manual cleanup, see `maintenance/cleanup.ps1` (Windows) and `mainte
 
 ## Important limitations
 
-- The new Ripple-Lite menu controls depend on the current Claude HTML/CSP and model-menu DOM. Automated tests cannot guarantee compatibility with a live signed-in Claude Desktop build; when anchors do not match, no menu is inserted.
+- The official Mod UI is supported only in Claude Code rendering areas (including the desktop Code tab), not the global Chat app title toolbar. It must be installed/loaded as a Claude Code plugin.
 - One-time ChatGPT login cannot be completed without your approval.
 - Claude Projects conversation data is not automatically mirrored to the local project folders.
 - A live Codex turn does not automatically read messages that arrive after the turn started; the messages are stored for later tasks.
 - Git worktree changes are **not merged automatically**. Review and integrate them separately.
 - The bridge does not detect Claude subscription limits or create Claude threads itself.
 - Detached tasks are not a guarantee of surviving a computer reboot. Recovery depends on a valid Codex session ID.
-- ClaudeBridge uses its own private Node.js 22 runtime (including built-in SQLite). The Ripple-Lite certificate is trusted only after explicit user approval and is removed during uninstall when possible.
+- ClaudeBridge uses its own private Node.js 22 runtime. This version does not install a new Ripple-Lite certificate or HTTPS proxy. Upgrades attempt to clean up prior owned Ripple-Lite installations.
 - This is a preview release. Mocked integration tests run on Windows, macOS, and Linux; authenticated Claude/Codex end-to-end behavior still requires field validation.
 
 ## Development and tests
