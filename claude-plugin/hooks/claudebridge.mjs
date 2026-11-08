@@ -53,7 +53,8 @@ export function register(on){
   await refresh($);
   return {text:'ClaudeBridge '+(expanded?'controls opened':'controls hidden')};
  });
- on('ui.render',{component:'AbovePrompt'},($,e,next)=>{
+ on('ui.render',{component:'AbovePrompt'},async ($,e,next)=>{
+  const previous=await next(e);
   const {Box,Text,Button}=$.ui.resolve(e);
   const children=[
    Button({label:'◈ ClaudeBridge ▾',plain:true,onPress:()=>{
@@ -68,6 +69,7 @@ export function register(on){
    children.push(Button({label:'↻',plain:true,onPress:()=>void refresh($)}));
    if(detail)children.push(Text({dimColor:true,children:detail.slice(0,160)}));
   }
-  return Box({flexDirection:'row',flexWrap:'wrap',gap:1,children});
+  const ourRow=Box({flexDirection:'row',flexWrap:'wrap',gap:1,children});
+  return Box({flexDirection:'column',gap:1,children:[previous,ourRow].filter(Boolean)});
  });
 }
