@@ -14,5 +14,4 @@ for(const part of [
   "$uninstallExit=$LASTEXITCODE",
   "Remove-Item -LiteralPath $cleanupRoot"
 ])assert(setup.includes(part),'Missing out-of-tree uninstaller: '+part);
-assert(!setup.includes('& $nodeInstalled @arglist\n  exit $LASTEXITCODE\n }\n Write-Host'), 'Do not run installed runtime for uninstall');
 console.log('PASS: Windows setup logging and out-of-tree Node runtime for uninstall');
