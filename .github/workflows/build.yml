@@ -295,7 +295,7 @@ jobs:
         with:
           pattern: ClaudeBridge-*
           merge-multiple: true
-      - name: Build SHA256-pinned lightweight online setup files
+      - name: Build verification-only source-based setup files
         if: steps.current.outputs.publish == 'true'
         run: |
           node installer/build-online.js
@@ -333,6 +333,6 @@ jobs:
             ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-Windows.cmd \
             ClaudeBridge-WebSetup-macOS.command ClaudeBridge-WebSetup-Linux.run \
             ClaudeBridge-Linux.mcpb ClaudeBridge-macOS.mcpb ClaudeBridge-Windows.mcpb \
-            ClaudeBridge-Setup-Windows.exe; do
+            ClaudeBridge-Setup-Windows.cmd; do
             gh release delete-asset preview "$obsolete" -y 2>/dev/null || true
           done
