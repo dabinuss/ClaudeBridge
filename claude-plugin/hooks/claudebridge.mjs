@@ -4,27 +4,35 @@
 const LABELS={off:'Off',manual:'On demand',fallback:'Fallback',dual:'Dual agents'};
 let expanded=false,mode='manual',available=false,detail='';
 
-async function installedCommand($){
+async function installedCommands($){
  const local=await $.env.get('LOCALAPPDATA');
  if(local){
-  const root=local+'\\ClaudeBridge\\Installed\\';
-  return [root+'integrations\\native-ui\\node.exe',
-    root+'integrations\\mod\\settings-cli.js'];
+  const base=local+'\\ClaudeBridge\\';
+  return ['Installed-Managed','Installed'].map(dir=>[
+    base+dir+'\\integrations\\native-ui\\node.exe',
+    base+dir+'\\integrations\\mod\\settings-cli.js']);
  }
  const home=await $.env.get('HOME');
- if(!home)return null;
+ if(!home)return [];
  const mac=await $.env.get('OSTYPE');
- const root=mac?.includes('darwin')?
-  home+'/Library/Application Support/ClaudeBridge/Installed/':
-  home+'/.local/share/claudebridge/Installed/';
- return [root+'integrations/native-ui/node',root+'integrations/mod/settings-cli.js'];
+ const base=mac?.includes('darwin')?
+  home+'/Library/Application Support/ClaudeBridge/':
+  home+'/.local/share/claudebridge/';
+ return ['Installed-Managed','Installed'].map(dir=>[
+   base+dir+'/integrations/native-ui/node',base+dir+'/integrations/mod/settings-cli.js']);
 }
 async function call($,args){
- const cmd=await installedCommand($);
- if(!cmd)throw Error('ClaudeBridge is not installed');
- const result=await $.process.run([...cmd,...args]);
- if(result.exitCode!==0)throw Error((result.stderr||'ClaudeBridge CLI unavailable').slice(0,300));
- return JSON.parse(result.stdout);
+ const candidates=await installedCommands($);
+ if(!candidates.length)throw Error('ClaudeBridge is not installed');
+ let previous='ClaudeBridge runtime unavailable';
+ for(const cmd of candidates){
+  try{
+   const result=await $.process.run([...cmd,...args]);
+   if(result.exitCode===0)return JSON.parse(result.stdout);
+   previous=String(result.stderr||previous).slice(0,300);
+  }catch(error){previous=String(error?.message||error);}
+ }
+ throw Error(previous);
 }
 async function refresh($){
  try{

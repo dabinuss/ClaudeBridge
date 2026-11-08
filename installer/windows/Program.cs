@@ -31,7 +31,8 @@ internal static class Program
             bool purgeData = args.Contains("--purge-data");
             if (args.Length == 0 && !unattended)
             {
-                bool present = File.Exists(Path.Combine(basePath, "installer-owned.json"));
+                bool present = File.Exists(Path.Combine(basePath, "installer-owned.json")) ||
+                               File.Exists(Path.Combine(Path.GetDirectoryName(basePath)!, "Installed-Managed", "installer-owned.json"));
                 int choice = MessageBoxW(IntPtr.Zero,
                     present
                     ? "ClaudeBridge is already installed.\n\nYes: Update / Repair\nNo: Uninstall\nCancel: Exit"
@@ -102,6 +103,14 @@ internal static class Program
             string error = errTask.GetAwaiter().GetResult().Trim();
             if (child.ExitCode != 0)
                 throw new Exception(string.IsNullOrWhiteSpace(error) ? output : error);
+            string activeInstallPath = basePath;
+            if (mode == "install" && !string.IsNullOrWhiteSpace(output))
+            {
+                using JsonDocument installInfo = JsonDocument.Parse(output);
+                if (installInfo.RootElement.TryGetProperty("installPath", out JsonElement ownedPath)
+                    && ownedPath.ValueKind == JsonValueKind.String)
+                    activeInstallPath = ownedPath.GetString() ?? basePath;
+            }
             // After a successful install, activate the official Claude Code Mod
             // with the CLI if available. Failure is non-fatal: MCP still works.
             string modStatus = "Claude Code Mod can be installed via the official plugin manager.";
@@ -120,7 +129,7 @@ internal static class Program
                         WorkingDirectory = temp
                     };
                     mod.StartInfo.ArgumentList.Add(modScript);
-                    mod.StartInfo.ArgumentList.Add(basePath);
+                    mod.StartInfo.ArgumentList.Add(activeInstallPath);
                     if (mod.Start())
                     {
                         Task<string> modOut = mod.StandardOutput.ReadToEndAsync();
