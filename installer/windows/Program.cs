@@ -155,7 +155,7 @@ internal static class Program
                   + "No HTTPS proxy or certificate was installed. No separate Node.js download is required. "
                   + "The private runtime is embedded in this installer.\n\n"
                   + "Restart the normal Claude Desktop application. The Claude Code Mod can be loaded "
-                  + "in Code sessions through Claude Code's official plugin manager."\n                  + "\\n\\nMod setup: " + modStatus
+                  + "in Code sessions through Claude Code's official plugin manager."\n                  + "\n\nMod setup: " + modStatus
                   + "\n\nSign in to Codex once using your ChatGPT account."
                 : mode == "uninstall"
                 ? "ClaudeBridge's own MCP entry and native launcher have been removed where possible.\n\n"
