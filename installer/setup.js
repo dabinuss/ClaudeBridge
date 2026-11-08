@@ -146,7 +146,7 @@ function install(){
  const previouslyOwned=existingData.backupCreated===true;
  const configCreated=existingData.configCreated===true||!fs.existsSync(configPath);
  const backupExisted=fs.existsSync(backup);
- writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.7.0',installedAt:new Date().toISOString(),backupCreated:previouslyOwned,configCreated})+'\n');
+ writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.8.0',installedAt:new Date().toISOString(),backupCreated:previouslyOwned,configCreated})+'\n');
  configure('install');
  if(!backupExisted&&fs.existsSync(backup))
   writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.7.0',installedAt:new Date().toISOString(),backupCreated:true,configCreated})+'\n');
@@ -155,7 +155,7 @@ function install(){
  const nativeResult={installed:false,skipped:true,
   reason:'Legacy launcher integration is disabled; native Chat model-menu support remains unverified.'};
  log(JSON.stringify({ok:true,mcp:true,native:nativeResult,config:configPath,
-  message:'ClaudeBridge MCP registered. Ripple-lite setup is handled by the single-file installer. Quit and reopen normal Claude Desktop.'}));
+  message:'ClaudeBridge MCP registered. No HTTPS proxy or certificate install. Claude Code Mod can be loaded as a plugin in the Code tab. Restart normal Claude Desktop.'}));
 }
 function purgePrivateMemory(){
  const bridgeHome=process.env.CLAUDEBRIDGE_SETUP_TEST_HOME?
