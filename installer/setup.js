@@ -15,8 +15,16 @@ const stateRoot=testHome?path.resolve(testHome):platform==='win32'?
   path.join(process.env.LOCALAPPDATA||path.join(home,'AppData','Local'),'ClaudeBridge'):
   platform==='darwin'?path.join(home,'Library','Application Support','ClaudeBridge'):
   path.join(home,'.local','share','claudebridge');
-const installPath=path.join(stateRoot,'Installed');
-const marker=path.join(installPath,'installer-owned.json');
+const primaryInstallPath=path.join(stateRoot,'Installed');
+const recoveryInstallPath=path.join(stateRoot,'Installed-Managed');
+function owned(p){
+ try{return JSON.parse(fs.readFileSync(path.join(p,'installer-owned.json'),'utf8')).owner==='claudebridge-standalone-v1';}
+ catch{return false;}
+}
+// Prefer an already owned installation, including the side-by-side recovery.
+// Keep the original path for existing working installations.
+let installPath=!owned(primaryInstallPath)&&owned(recoveryInstallPath)?recoveryInstallPath:primaryInstallPath;
+let marker=path.join(installPath,'installer-owned.json');
 const configPath=testHome?path.join(testHome,'Claude','claude_desktop_config.json'):
   platform==='win32'?path.join(process.env.APPDATA||path.join(home,'AppData','Roaming'),'Claude','claude_desktop_config.json'):
   platform==='darwin'?path.join(home,'Library','Application Support','Claude','claude_desktop_config.json'):
@@ -112,6 +120,14 @@ function containsPayload(){
  for(const relative of payloadFiles)if(!fs.existsSync(path.join(root,relative)))throw Error('Missing payload: '+relative);
  packageNode();
 }
+function legacyRegistration(entry){
+ if(!entry||typeof entry!=='object'||!Array.isArray(entry.args)||entry.args.length!==1)return false;
+ const runtime=platform==='win32'?'node.exe':'node';
+ const legacyNode=path.join(primaryInstallPath,'integrations','native-ui',runtime);
+ return installPath!==primaryInstallPath&&
+   entry.command===legacyNode &&
+   path.resolve(entry.args[0])===path.resolve(path.join(primaryInstallPath,'server','v2.js'));
+}
 function sameRegistration(entry){
  if(!entry||typeof entry!=='object')return false;
  const args=entry.args;
@@ -126,7 +142,7 @@ function configure(action,allowAbsent=false){
  const servers=data.mcpServers||{};
  const prior=servers[SERVER_KEY];
  if(action==='install'){
-  if(prior&&!sameRegistration(prior))throw Error('Claude already has a different '+SERVER_KEY+' MCP entry. Uninstall that one first.');
+  if(prior&&!sameRegistration(prior)&&!legacyRegistration(prior))throw Error('Claude already has a different '+SERVER_KEY+' MCP entry. Uninstall that one first.');
   servers[SERVER_KEY]={command:nodeExecutable(),args:[path.join(installPath,'server','v2.js')]};
   data.mcpServers=servers;
  }else if(prior){
@@ -174,7 +190,20 @@ function copyItem(src,dst){
  }else throw Error('Unexpected payload object: '+src);
 }
 function install(){
- containsPayload();ensureOwnership({repair:true});
+ containsPayload();
+ try{ensureOwnership({repair:true});}
+ catch(error){
+  // The earlier uninstall may have left unverified files. Never overwrite,
+  // move or delete them. Use a separately owned installation directory.
+  if(installPath!==primaryInstallPath||owned(primaryInstallPath)||
+     fs.existsSync(marker)||!String(error.message).includes('Unowned installation directory'))
+   throw error;
+  installPath=recoveryInstallPath;
+  marker=path.join(installPath,'installer-owned.json');
+  ensureOwnership({repair:true});
+  process.stderr.write('Preserved unverified installation at '+primaryInstallPath+
+    '; installing side by side at '+installPath+'\n');
+ }
  if(fs.existsSync(installPath)){
   // Reinstall in place so Claude's MCP entry keeps the same path.
   // Full cold replacement is performed only when Claude is not running.
@@ -197,16 +226,16 @@ function install(){
  const previouslyOwned=existingData.backupCreated===true;
  const configCreated=existingData.configCreated===true||!fs.existsSync(configPath);
  const backupExisted=fs.existsSync(backup);
- writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.8.0',installedAt:new Date().toISOString(),backupCreated:previouslyOwned,configCreated})+'\n');
+ writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.9.1',installedAt:new Date().toISOString(),backupCreated:previouslyOwned,configCreated})+'\n');
  configure('install');
  if(!backupExisted&&fs.existsSync(backup))
-  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.9.0',installedAt:new Date().toISOString(),backupCreated:true,configCreated})+'\n');
+  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.9.1',installedAt:new Date().toISOString(),backupCreated:true,configCreated})+'\n');
  // ClaudeBridge must work through the original Claude Desktop launcher.
  // The experimental CDP companion needs a second launcher and is not installed.
  const nativeResult={installed:false,skipped:true,
   reason:'Legacy launcher integration is disabled; native Chat model-menu support remains unverified.'};
  log(JSON.stringify({ok:true,mcp:true,native:nativeResult,config:configPath,
-  message:'ClaudeBridge MCP registered. No HTTPS proxy or certificate install. Claude Code Mod can be loaded as a plugin in the Code tab. Restart normal Claude Desktop.'}));
+  installPath,message:'ClaudeBridge MCP registered. No HTTPS proxy or certificate install. Claude Code Mod can be loaded as a plugin in the Code tab. Restart normal Claude Desktop.'}));
 }
 function purgePrivateMemory(){
  const bridgeHome=process.env.CLAUDEBRIDGE_SETUP_TEST_HOME?
