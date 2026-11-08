@@ -204,9 +204,11 @@ jobs:
           $archivePath = (Resolve-Path "ClaudeBridge-${{ matrix.label }}.zip").Path
           $zip = [System.IO.Compression.ZipFile]::Open($archivePath, [System.IO.Compression.ZipArchiveMode]::Update)
           try {
-            $manifestPath = (Resolve-Path -LiteralPath "claude-plugin/.claude-plugin/plugin.json").Path
-            if ($null -eq $zip.GetEntry("claude-plugin/.claude-plugin/plugin.json")) {
-              [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $manifestPath, "claude-plugin/.claude-plugin/plugin.json")
+            foreach ($relative in @("claude-plugin/.claude-plugin/plugin.json", "claude-plugin/.claude-plugin/marketplace.json")) {
+              $file = (Resolve-Path -LiteralPath $relative).Path
+              if ($null -eq $zip.GetEntry($relative)) {
+                [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $file, $relative)
+              }
             }
           } finally {
             $zip.Dispose()
