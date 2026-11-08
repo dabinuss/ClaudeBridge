@@ -140,6 +140,14 @@ function install(){
  }
  mkdir(installPath);
  for(const file of payloadFiles)copyItem(path.join(root,file),path.join(installPath,file));
+ // Retire code from previous Ripple releases only after the proxy lifecycle
+ // has been disabled. Never erase code needed to reverse live TLS trust.
+ const activeRipple=path.join(home,'.claudebridge','ripple-lite','enabled.json');
+ if(!fs.existsSync(activeRipple)){
+  const legacyDir=path.join(installPath,'integrations','ripple-lite');
+  if(fs.existsSync(legacyDir)&&!isLink(legacyDir))
+   fs.rmSync(legacyDir,{recursive:true,force:true});
+ }
  const backup=configPath+'.claudebridge-backup';
  const existingOwner=cleanFile(marker);
  const existingData=existingOwner?JSON.parse(existingOwner):{};
