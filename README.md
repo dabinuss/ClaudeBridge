@@ -55,11 +55,11 @@ The bundled plugin includes a real Claude Code Mods hooks module at `claude-plug
 
 The official Mod API currently **does not expose the global Claude Desktop header** beside the project title (such as `MemeWars`), nor the normal Chat model selector. It cannot put the control at precisely that screenshot location. The Code-tab AbovePrompt band is the closest **supported** native drawing surface. We will not use HTTPS interception, certificate trust, patching, or an alternate launcher as an implicit workaround.
 
-The installer bundles the Mod source alongside the MCP plugin; **installing the MCP server alone does not automatically enable a Claude Code plugin**. In a local Claude Code session, use the supported plugin manager to load `claude-plugin` or test the folder via `claude --plugin-dir <installed ClaudeBridge path>/claude-plugin`. After loading, the control appears where Mods draw UI, not in the app-level title bar.
+The installer bundles the Mod source and a local plugin marketplace. If a Claude Code CLI is available, it attempts `claude plugin marketplace add` and `claude plugin install claudebridge@claudebridge-local --scope user` automatically. If the CLI is absent, the install reports the Mod as inactive without affecting MCP; you can install it later from Claude Code's `/plugin` manager or add the installed `claude-plugin` folder as a local marketplace. Once installed, `/reload-plugins` loads the UI in local Code sessions. The control is above the prompt, **not** in the global app header.
 
 ## First use in the normal Claude Desktop app
 
-1. Run the compact **ClaudeBridge-Setup** installer. All Bridge scripts are embedded. Node.js, Codex CLI and node-forge are downloaded privately on demand. No certificate approval is needed in the new setup.
+1. Run the compact **ClaudeBridge-Setup** installer. All Bridge scripts are embedded. Node.js and Codex CLI are downloaded privately on demand. No certificate approval is needed in the new setup.
 2. Restart **Claude Desktop using its original icon**. ClaudeBridge remains registered as MCP, and the optional Claude Code Mod can show its controls above the prompt in local Code sessions once the plugin is loaded.
 3. Ask Claude: **“Check ClaudeBridge, select my local code project and connect Codex if necessary.”** If Codex is already signed in, the existing account is used; otherwise approve one-time device sign-in.
 
