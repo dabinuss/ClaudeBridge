@@ -65,7 +65,7 @@ function inspectOrphan(){
  // foreign files. Other partial installs require a valid ClaudeBridge manifest
  // and both core entry points.
  const runtime=platform==='win32'?'integrations/native-ui/node.exe':'integrations/native-ui/node';
- const onlyRuntime=files.length===1&&files[0]===runtime;
+ const onlyRuntime=files.length===0||(files.length===1&&files[0]===runtime);
  let verifiedCore=false;
  if(files.includes('manifest.json')&&files.includes('server/v2.js')&&files.includes('installer/setup.js')){
   try{verifiedCore=JSON.parse(fs.readFileSync(path.join(installPath,'manifest.json'),'utf8')).name==='claudebridge';}
@@ -87,7 +87,7 @@ function ensureOwnership({repair=false}={}){
   const recovered=inspectOrphan();
   writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',
    recoveredAt:new Date().toISOString(),recovery:recovered,backupCreated:false,configCreated:false})+'\n');
-  log('Recovered verified incomplete ClaudeBridge installation: '+JSON.stringify(recovered));
+  process.stderr.write('Recovered verified incomplete ClaudeBridge installation: '+JSON.stringify(recovered)+'\n');
   return;
  }
  let owner;
