@@ -30,11 +30,9 @@ function prepare(){
  const vendor=path.join(root,'vendor');
  fs.mkdirSync(vendor,{recursive:true});
  run([npmCli,'install','--prefix',vendor,'--no-save','--no-audit','--no-fund','--ignore-scripts',
-    '--registry=https://registry.npmjs.org','@openai/codex@'+version,'node-forge@1.4.3']);
+    '--registry=https://registry.npmjs.org','@openai/codex@'+version]);
  const codex=path.join(vendor,'node_modules','@openai','codex','bin','codex.js');
  if(!fs.existsSync(codex))throw Error('Codex package installation is incomplete');
- if(!fs.existsSync(path.join(vendor,'node_modules','node-forge','package.json')))
-  throw Error('Certificate support package installation is incomplete');
  // npm integrity and HTTPS are checked by npm; verify the unpacked CLI is the expected version.
  const verify=spawnSync(process.execPath,[codex,'--version'],{encoding:'utf8',timeout:10000,windowsHide:true});
  if(verify.status!==0||!String(verify.stdout).includes(version))
@@ -42,22 +40,46 @@ function prepare(){
 }
 function main(){
  if(action==='install'){
-  prepare();
-  const script=path.join(root,'installer','setup.js');
-  const r=run([script,'install']);
-  process.stdout.write(r.stdout);
-  if(process.env.CLAUDEBRIDGE_SETUP_TEST_HOME||process.env.CLAUDEBRIDGE_SETUP_SKIP_NATIVE==='1'){
-   process.stdout.write('Ripple-lite activation deliberately omitted in test mode.\n');
-  }else{
+  // Retire old proxy BEFORE npm replaces the old vendor tree. The old
+  // Ripple disable implementation still requires node-forge to load.
+  if(!process.env.CLAUDEBRIDGE_SETUP_TEST_HOME){
    const installed=process.platform==='win32'?
     path.join(process.env.LOCALAPPDATA||path.join(os.homedir(),'AppData','Local'),'ClaudeBridge','Installed'):
     process.platform==='darwin'?
       path.join(os.homedir(),'Library','Application Support','ClaudeBridge','Installed'):
       path.join(os.homedir(),'.local','share','claudebridge','Installed');
-   const activate=path.join(installed,'integrations','ripple-lite','activate.js');
-   const result=spawnSync(process.execPath,[activate,'enable',installed],
-    {stdio:'inherit',windowsHide:false,timeout:90000,shell:false});
-   if(result.status!==0)throw Error('Ripple-lite activation did not complete. Installation remains MCP-only; run activation again after resolving the error.');
+   const legacyMarker=path.join(os.homedir(),'.claudebridge','ripple-lite','enabled.json');
+   if(fs.existsSync(legacyMarker)){
+    const oldNode=path.join(installed,'integrations','native-ui',process.platform==='win32'?'node.exe':'node');
+    const disable=path.join(installed,'integrations','ripple-lite','activate.js');
+    if(!fs.existsSync(oldNode)||!fs.existsSync(disable))
+     throw Error('Old Ripple-lite ownership marker exists but its installer was not found; refusing to remove trust blindly');
+    const cleanup=spawnSync(oldNode,[disable,'disable',installed],
+     {encoding:'utf8',timeout:60000,windowsHide:true,shell:false});
+    if(cleanup.status!==0||cleanup.error)throw Error('Previous Ripple-lite cleanup failed: '+
+     String(cleanup.stderr||cleanup.error?.message||'unknown failure').slice(-800));
+    process.stdout.write('Previous Ripple-lite proxy disabled and Claude settings restored.\\n');
+   }
+  }
+  prepare();
+  const script=path.join(root,'installer','setup.js');
+  const r=run([script,'install']);
+  process.stdout.write(r.stdout);
+  // Claude Code Mods use the documented plugin UI. No local HTTPS proxy,
+  // certificate trust, egressProxyUrl or daemon is enabled on fresh installs.
+  process.stdout.write('ClaudeBridge installed without HTTPS proxy or certificate trust.\n');
+  if(!process.env.CLAUDEBRIDGE_SETUP_TEST_HOME){
+   const installed=process.platform==='win32'?
+    path.join(process.env.LOCALAPPDATA||path.join(os.homedir(),'AppData','Local'),'ClaudeBridge','Installed'):
+    process.platform==='darwin'?
+      path.join(os.homedir(),'Library','Application Support','ClaudeBridge','Installed'):
+      path.join(os.homedir(),'.local','share','claudebridge','Installed');
+   const modInstaller=path.join(installed,'installer','mod-install.js');
+   const modResult=spawnSync(process.execPath,[modInstaller,installed],
+    {encoding:'utf8',timeout:120000,windowsHide:true,shell:false});
+   if(modResult.status===0)process.stdout.write(modResult.stdout);
+   else process.stderr.write('ClaudeBridge Mod optional activation: '+
+     String(modResult.stderr||modResult.error?.message||'unavailable').slice(-500)+'\n');
   }
   return;
  }

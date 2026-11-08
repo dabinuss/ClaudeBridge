@@ -1,0 +1,13 @@
+{
+  "name": "claudebridge-local",
+  "owner": {
+    "name": "ClaudeBridge"
+  },
+  "plugins": [
+    {
+      "name": "claudebridge",
+      "source": ".",
+      "description": "Proxy-free ClaudeBridge controls in the official Claude Code Mod UI"
+    }
+  ]
+}

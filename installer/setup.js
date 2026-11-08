@@ -140,13 +140,21 @@ function install(){
  }
  mkdir(installPath);
  for(const file of payloadFiles)copyItem(path.join(root,file),path.join(installPath,file));
+ // Retire code from previous Ripple releases only after the proxy lifecycle
+ // has been disabled. Never erase code needed to reverse live TLS trust.
+ const activeRipple=path.join(home,'.claudebridge','ripple-lite','enabled.json');
+ if(!fs.existsSync(activeRipple)){
+  const legacyDir=path.join(installPath,'integrations','ripple-lite');
+  if(fs.existsSync(legacyDir)&&!isLink(legacyDir))
+   fs.rmSync(legacyDir,{recursive:true,force:true});
+ }
  const backup=configPath+'.claudebridge-backup';
  const existingOwner=cleanFile(marker);
  const existingData=existingOwner?JSON.parse(existingOwner):{};
  const previouslyOwned=existingData.backupCreated===true;
  const configCreated=existingData.configCreated===true||!fs.existsSync(configPath);
  const backupExisted=fs.existsSync(backup);
- writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.7.0',installedAt:new Date().toISOString(),backupCreated:previouslyOwned,configCreated})+'\n');
+ writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.8.0',installedAt:new Date().toISOString(),backupCreated:previouslyOwned,configCreated})+'\n');
  configure('install');
  if(!backupExisted&&fs.existsSync(backup))
   writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.7.0',installedAt:new Date().toISOString(),backupCreated:true,configCreated})+'\n');
@@ -155,7 +163,7 @@ function install(){
  const nativeResult={installed:false,skipped:true,
   reason:'Legacy launcher integration is disabled; native Chat model-menu support remains unverified.'};
  log(JSON.stringify({ok:true,mcp:true,native:nativeResult,config:configPath,
-  message:'ClaudeBridge MCP registered. Ripple-lite setup is handled by the single-file installer. Quit and reopen normal Claude Desktop.'}));
+  message:'ClaudeBridge MCP registered. No HTTPS proxy or certificate install. Claude Code Mod can be loaded as a plugin in the Code tab. Restart normal Claude Desktop.'}));
 }
 function purgePrivateMemory(){
  const bridgeHome=process.env.CLAUDEBRIDGE_SETUP_TEST_HOME?
