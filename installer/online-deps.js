@@ -40,13 +40,8 @@ function prepare(){
 }
 function main(){
  if(action==='install'){
-  prepare();
-  const script=path.join(root,'installer','setup.js');
-  const r=run([script,'install']);
-  process.stdout.write(r.stdout);
-  // Upgrade from Ripple-lite: only dismantle a previous installation after
-  // the new MCP installation succeeds. Existing CA and Desktop proxy must not
-  // be left active just because the new version no longer needs them.
+  // Retire old proxy BEFORE npm replaces the old vendor tree. The old
+  // Ripple disable implementation still requires node-forge to load.
   if(!process.env.CLAUDEBRIDGE_SETUP_TEST_HOME){
    const installed=process.platform==='win32'?
     path.join(process.env.LOCALAPPDATA||path.join(os.homedir(),'AppData','Local'),'ClaudeBridge','Installed'):
@@ -55,15 +50,21 @@ function main(){
       path.join(os.homedir(),'.local','share','claudebridge','Installed');
    const legacyMarker=path.join(os.homedir(),'.claudebridge','ripple-lite','enabled.json');
    if(fs.existsSync(legacyMarker)){
-    const cleanup=spawnSync(process.execPath,[
-     path.join(installed,'integrations','ripple-lite','activate.js'),'disable',installed],
+    const oldNode=path.join(installed,'integrations','native-ui',process.platform==='win32'?'node.exe':'node');
+    const disable=path.join(installed,'integrations','ripple-lite','activate.js');
+    if(!fs.existsSync(oldNode)||!fs.existsSync(disable))
+     throw Error('Old Ripple-lite ownership marker exists but its installer was not found; refusing to remove trust blindly');
+    const cleanup=spawnSync(oldNode,[disable,'disable',installed],
      {encoding:'utf8',timeout:60000,windowsHide:true,shell:false});
-    if(cleanup.status!==0||cleanup.error)
-     throw Error('Previous Ripple-lite proxy could not be disabled safely: '+
-      String(cleanup.stderr||cleanup.error?.message||'unknown failure').slice(-800));
-    process.stdout.write('Previous Ripple-lite proxy disabled and Claude settings restored.\n');
+    if(cleanup.status!==0||cleanup.error)throw Error('Previous Ripple-lite cleanup failed: '+
+     String(cleanup.stderr||cleanup.error?.message||'unknown failure').slice(-800));
+    process.stdout.write('Previous Ripple-lite proxy disabled and Claude settings restored.\\n');
    }
   }
+  prepare();
+  const script=path.join(root,'installer','setup.js');
+  const r=run([script,'install']);
+  process.stdout.write(r.stdout);
   // Claude Code Mods use the documented plugin UI. No local HTTPS proxy,
   // certificate trust, egressProxyUrl or daemon is enabled on fresh installs.
   process.stdout.write('ClaudeBridge installed without HTTPS proxy or certificate trust.\n');
