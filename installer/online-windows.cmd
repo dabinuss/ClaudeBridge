@@ -3,10 +3,25 @@ setlocal
 set "CLAUDEBRIDGE_SETUP_SCRIPT=%~f0"
 set "CLAUDEBRIDGE_SETUP_ARGS=%*"
 powershell.exe -NoProfile -Command "$s=[IO.File]::ReadAllText($env:CLAUDEBRIDGE_SETUP_SCRIPT); $mark=('# CLAUDEBRIDGE'+' POWERSHELL START'); $end=('# CLAUDEBRIDGE'+' CORE PAYLOAD'); $pos=$s.IndexOf($mark); $stop=$s.LastIndexOf($end); if($pos -lt 0 -or $stop -le $pos){throw 'Invalid embedded ClaudeBridge setup'}; Invoke-Expression $s.Substring($pos + $mark.Length,$stop - $pos - $mark.Length)"
-exit /b %errorlevel%
+set "CLAUDEBRIDGE_EXIT_CODE=%errorlevel%"
+if not "%CLAUDEBRIDGE_EXIT_CODE%"=="0" (
+  echo.
+  echo ClaudeBridge installation failed with exit code %CLAUDEBRIDGE_EXIT_CODE%.
+  echo Log: %LOCALAPPDATA%\ClaudeBridge\setup.log
+  echo Press any key to close this window after reading the error.
+  pause >nul
+)
+exit /b %CLAUDEBRIDGE_EXIT_CODE%
 # CLAUDEBRIDGE POWERSHELL START
 $ErrorActionPreference='Stop'
 $ProgressPreference='SilentlyContinue'
+# Preserve the complete console record across short-lived double-clicked setups.
+$logDir=Join-Path $env:LOCALAPPDATA 'ClaudeBridge'
+New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+$logFile=Join-Path $logDir 'setup.log'
+try { Start-Transcript -Path $logFile -Append -ErrorAction Stop | Out-Null }
+catch { Write-Warning "Unable to start setup transcript: $($_.Exception.Message)" }
+Write-Host "ClaudeBridge setup log: $logFile"
 $mode='install'
 $purge=$false
 $cli=[string]$env:CLAUDEBRIDGE_SETUP_ARGS
@@ -79,8 +94,14 @@ try{
  if(!(Test-Path $node) -or !(Test-Path $npm)){throw 'Official Node archive did not contain Node.js and npm.'}
  $env:CLAUDEBRIDGE_NPM_CLI=$npm
  & $node (Join-Path $coreDir 'installer\online-deps.js') install
- if($LASTEXITCODE -ne 0){throw 'ClaudeBridge setup returned an error.'}
+ if($LASTEXITCODE -ne 0){throw "ClaudeBridge setup returned exit code $LASTEXITCODE. See $logFile for the original error."}
  Write-Host 'ClaudeBridge installed. Fully quit Claude and reopen the normal Claude Desktop application.'
+}catch{
+ Write-Host ''
+ Write-Host ('ClaudeBridge ERROR: '+$_.Exception.Message) -ForegroundColor Red
+ Write-Host ('Details saved in: '+$logFile) -ForegroundColor Yellow
+ throw
 }finally{
  Remove-Item -LiteralPath $root -Force -Recurse -ErrorAction SilentlyContinue
+ try { Stop-Transcript -ErrorAction SilentlyContinue | Out-Null } catch {}
 }
