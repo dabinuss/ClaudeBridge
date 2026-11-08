@@ -34,9 +34,20 @@ try{
  fs.rmSync(path.join(installed,'installer-owned.json'));
  put(path.join(installed,'unrelated-user-file.txt'),'keep');
  result=run();
- assert.notEqual(result.status,0,'must reject unowned unknown files');
+ assert.equal(result.status,0,result.stderr+'\\n'+result.stdout);
+ const recovered=JSON.parse(result.stdout);
+ assert.equal(recovered.installPath,path.join(home,'Installed-Managed'));
  assert.equal(fs.readFileSync(path.join(installed,'unrelated-user-file.txt'),'utf8'),'keep');
  assert(!fs.existsSync(path.join(installed,'installer-owned.json')));
- console.log('PASS: verified EBUSY orphan repaired, foreign files preserved');
+ assert(fs.existsSync(path.join(home,'Installed-Managed','installer-owned.json')));
+ // Subsequent repairs and uninstall reuse the safe owned directory.
+ result=run();
+ assert.equal(result.status,0,result.stderr);
+ assert.equal(JSON.parse(result.stdout).installPath,recovered.installPath);
+ const remove=spawnSync(process.execPath,[setup,'uninstall'],{env,encoding:'utf8',timeout:30000});
+ assert.equal(remove.status,0,remove.stderr);
+ assert(!fs.existsSync(recovered.installPath));
+ assert.equal(fs.readFileSync(path.join(installed,'unrelated-user-file.txt'),'utf8'),'keep');
+ console.log('PASS: verified orphan repaired and unknown residues preserved using side-by-side install');
 }catch(error){console.error(error);process.exitCode=1;}
 finally{fs.rmSync(temp,{recursive:true,force:true,maxRetries:5,retryDelay:200});}
