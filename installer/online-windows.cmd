@@ -50,6 +50,23 @@ if($mode -ne 'install'){
  if((Test-Path $nodeInstalled) -and (Test-Path $setupInstalled)){
   $arglist=@($setupInstalled,$mode)
   if($mode -eq 'uninstall' -and $purge){$arglist+= '--purge-data'}
+  # Windows locks the executable image of a running process. Never uninstall
+  # using node.exe FROM the directory that is about to be removed.
+  # Run the installed uninstall script with a temporary COPY of the runtime.
+  if($mode -eq 'uninstall'){
+   $cleanupRoot=Join-Path ([IO.Path]::GetTempPath()) ('ClaudeBridgeUninstall-'+[guid]::NewGuid().ToString('N'))
+   New-Item -ItemType Directory -Path $cleanupRoot -Force | Out-Null
+   $temporaryNode=Join-Path $cleanupRoot 'node.exe'
+   try {
+    Copy-Item -LiteralPath $nodeInstalled -Destination $temporaryNode -ErrorAction Stop
+    Write-Host 'Removing ClaudeBridge using a temporary Node runtime outside the installed directory.'
+    & $temporaryNode @arglist
+    $uninstallExit=$LASTEXITCODE
+   } finally {
+    Remove-Item -LiteralPath $cleanupRoot -Force -Recurse -ErrorAction SilentlyContinue
+   }
+   exit $uninstallExit
+  }
   & $nodeInstalled @arglist
   exit $LASTEXITCODE
  }
