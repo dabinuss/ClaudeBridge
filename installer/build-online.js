@@ -40,6 +40,8 @@ try{
   'integrations/ripple-lite/service.js','integrations/ripple-lite/desktop-config.js',
   'integrations/ripple-lite/chat-rpc.js','integrations/ripple-lite/html-inject.js',
   'integrations/ripple-lite/codex-model.js',
+  'integrations/mod/settings-cli.js',
+  'claude-plugin/hooks/hooks.json','claude-plugin/hooks/claudebridge.mjs',
   'claude-plugin/.claude-plugin/plugin.json','claude-plugin/skills/claudebridge/SKILL.md',
   'claude-plugin/commands/bridge.md','claude-plugin/commands/bridge-login.md','claude-plugin/commands/bridge-dual.md'
  ];
