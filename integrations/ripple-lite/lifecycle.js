@@ -49,27 +49,35 @@ async function enable({installed,consent=false}={}){
  const identity=createIdentity(path.join(dir,'certs'));
  const spec=service.serviceSpec({exe:node,script});
  let trusted=false,started=false,configured=false;
+ let stage='certificate trust';
  try{
   trust.apply('trust',identity.ca,{confirm:true});trusted=true;
+  stage='Windows autostart registration';
   service.install(spec);started=true;
   if(process.platform==='win32'){
    const proc=spawn(node,[script],{detached:true,windowsHide:true,stdio:'ignore',shell:false});
    proc.on('error',()=>{});proc.unref();
   }
+  stage='local proxy startup';
   let alive=false;
-  for(let n=0;n<25;n++){
+  for(let n=0;n<75;n++){
    if(await isAlive()){alive=true;break;}
    await new Promise(resolve=>setTimeout(resolve,200));
   }
   if(!alive)throw Error('ClaudeBridge proxy did not become reachable; refusing to configure Claude');
+  stage='Claude Desktop proxy configuration';
   desktop.apply({proxyUrl:'http://127.0.0.1:'+PORT,owner:installed});configured=true;
+  stage='activation state persistence';
   fs.writeFileSync(path.join(dir,'enabled.json'),JSON.stringify({installed,fingerprint:identity.fingerprint}),{mode:0o600});
   return {enabled:true,port:PORT,fingerprint:identity.fingerprint,restartClaude:true};
  }catch(error){
-  if(configured){try{desktop.remove({owner:installed});}catch{}}
-  if(started){try{service.uninstall(spec);}catch{}}
-  if(trusted){try{trust.apply('untrust',identity.ca,{confirm:true});}catch{}}
-  throw error;
+  const cleanup=[];
+  if(configured){try{desktop.remove({owner:installed});}catch(e){cleanup.push('proxy restoration: '+e.message);}}
+  if(started){try{service.uninstall(spec);}catch(e){cleanup.push('service cleanup: '+e.message);}}
+  if(trusted){try{trust.apply('untrust',identity.ca,{confirm:true});}catch(e){cleanup.push('certificate cleanup: '+e.message);}}
+  const reason=error instanceof Error?error.message:String(error);
+  throw new Error('Ripple-lite activation failed during '+stage+': '+reason+
+    (cleanup.length?'; cleanup errors: '+cleanup.join('; '):''),{cause:error});
  }
 }
 async function disable({installed}={}){
