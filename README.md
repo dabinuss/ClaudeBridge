@@ -2,39 +2,28 @@
 
 **Use Claude Desktop and Codex CLI together through ordinary Claude conversations. No slash commands required.**
 
-![Version](https://img.shields.io/badge/version-2.8.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
+![Version](https://img.shields.io/badge/version-2.9.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
 
 > Preview: ClaudeBridge integrates with the normal Claude Desktop client as MCP. Its official Claude Code Mod provides a visible `◈ ClaudeBridge ▾` control **above the prompt in the local Code tab**, not in the global app header. No HTTPS proxy, CA certificate, client patch, or separate launcher is installed by default.
 
-## Small online setup (recommended)
+## Install ClaudeBridge
 
-**One compact installer per operating system.** Each download already contains **every ClaudeBridge-owned file**: MCP server, task workers, SQLite/project memory logic, browser UI, native menu scripts, installer and uninstaller. It does not include the separate Node.js runtime or Codex binary.
+**Windows:** [Download ClaudeBridge-Setup-Windows.exe](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Setup-Windows.exe).
 
-| Platform | Download |
-| --- | --- |
-| Windows | [ClaudeBridge-Setup-Windows.cmd](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Setup-Windows.cmd) — double-click |
-| macOS | [ClaudeBridge-Setup-macOS.command](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Setup-macOS.command) — open as an executable script |
-| Linux | [ClaudeBridge-Setup-Linux.run](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Setup-Linux.run) — mark executable and launch |
+The Windows installer is an offline, self-contained executable. It includes the private Node.js runtime, Codex CLI package, ClaudeBridge MCP server, official Code Mod source and all application assets. **No separate Node.js download or global Node installation is needed.** The JavaScript runtime remains embedded inside the executable and is extracted privately for the existing MCP implementation; converting the entire MCP backend to native code is a separate change.
 
-### What is downloaded during installation?
+- macOS: [ClaudeBridge-Setup-macOS.command](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Setup-macOS.command) (online installer)
+- Linux: [ClaudeBridge-Setup-Linux.run](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Setup-Linux.run) (online installer)
 
-1. **ClaudeBridge's own application is already embedded in the installer** (MCP backend, complete UI, desktop companion and setup/removal scripts). No GitHub source or core archive is downloaded during installation.
-2. A **pinned Node.js LTS runtime**, downloaded directly from https://nodejs.org and checked against its SHA-256 manifest. It is used **privately by ClaudeBridge**, with no global PATH changes.
-3. **Codex CLI 0.167.0** installed privately from npm. No certificate-generation library is downloaded for the new proxy-free setup.nstalled into ClaudeBridge's private `vendor` directory from the official npm registry with integrity verification and no global packages. The small node-forge package generates the local TLS certificates without requiring OpenSSL.
+If an earlier Windows uninstall left `Installed/integrations/native-ui/node.exe` but removed the ownership marker, the new Windows installer identifies this exact safe-to-repair residue, restores the ownership marker and completes installation. An unowned directory with unrelated files is **never** adopted automatically.
 
-All ClaudeBridge-owned code is downloaded upfront inside the small installer. The additional program files are transferred **during setup**, so internet access is required. This changes the *installer download size*, not necessarily the final amount of installed data.
+Installation registers ClaudeBridge MCP and offers the Code Mod using the supported plugin manager when available. The normal Claude Desktop app is not patched; no proxy, CA certificate or alternate launcher is installed. Previously enabled owned Ripple-Lite proxy settings should be disabled and restored before upgrading; see installer diagnostics for failures.
 
-The installer registers the `claudebridge` MCP server without installing a proxy, local CA, or alternative launcher. When upgrading a previously active Ripple-Lite installation, it attempts to restore the previous Claude proxy configuration and remove the user-trusted CA before declaring success.
-
-**To update or uninstall**, start **the same file** again. Existing private Node.js and ClaudeBridge files are reused for uninstall, so removing ClaudeBridge does not require redownloading the application. You may keep or explicitly delete saved plans and project memory; your project source code is never deleted.
-
-The large fully-offline installers remain available through GitHub Actions build artifacts when needed; the recommended installers embed ClaudeBridge itself but download only external dependencies.
-
-**Compatibility:** These installers are tested in CI on Windows, macOS and Linux. Signed-in end-to-end Claude Desktop UI behavior, particularly the optional model-menu injection, remains experimental. On macOS, security settings may require explicit approval of a downloaded `.command` script; on Linux, desktop environments may require enabling executable permissions.
+Windows .exe setup/update/uninstall never needs to download Node.js. Other platforms' online installers still fetch a private runtime as needed.
 
 ## ClaudeBridge control panel inside Claude
 
-ClaudeBridge 2.8.0 includes an interactive **MCP Apps** control panel without replacing the MCP bridge. In your Claude conversation, ask:
+ClaudeBridge 2.9.0 includes an interactive **MCP Apps** control panel without replacing the MCP bridge. In your Claude conversation, ask:
 
 > **Open ClaudeBridge settings.**
 

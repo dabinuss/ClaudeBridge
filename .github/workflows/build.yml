@@ -101,6 +101,8 @@ jobs:
           fi
       - name: Test one-file installer config registration
         run: node tests/standalone-setup.js
+      - name: Test orphaned Windows-runtime recovery after interrupted uninstall
+        run: node tests/orphan-repair.js
       - name: Bundle Codex CLI runtime
         run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 node-forge@1.4.3
       - name: Install build-only dependencies
@@ -293,12 +295,12 @@ jobs:
         with:
           pattern: ClaudeBridge-*
           merge-multiple: true
-      - name: Build SHA256-pinned lightweight online setup files
+      - name: Build verification-only source-based setup files
         if: steps.current.outputs.publish == 'true'
         run: |
           node installer/build-online.js
           test -s ClaudeBridge-Online-Core.tar.gz
-          test -s ClaudeBridge-Setup-Windows.cmd
+          test -s ClaudeBridge-Setup-Windows.exe
           test -s ClaudeBridge-Setup-macOS.command
           test -s ClaudeBridge-Setup-Linux.run
           bash -n installer/online-unix.sh
@@ -313,7 +315,7 @@ jobs:
         run: gh release delete-asset preview ClaudeBridge.mcpb -y 2>/dev/null || true
       - name: Generate SHA-256 checksums
         if: steps.current.outputs.publish == 'true'
-        run: sha256sum ClaudeBridge-Setup-Windows.cmd ClaudeBridge-Setup-macOS.command ClaudeBridge-Setup-Linux.run > SHA256SUMS
+        run: sha256sum ClaudeBridge-Setup-Windows.exe ClaudeBridge-Setup-macOS.command ClaudeBridge-Setup-Linux.run > SHA256SUMS
       - name: Publish preview installers
         if: steps.current.outputs.publish == 'true'
         env:
@@ -321,16 +323,16 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           if gh release view preview >/dev/null 2>&1; then
-            gh release upload preview ClaudeBridge-Setup-Windows.cmd ClaudeBridge-Setup-macOS.command ClaudeBridge-Setup-Linux.run SHA256SUMS --clobber
+            gh release upload preview ClaudeBridge-Setup-Windows.exe ClaudeBridge-Setup-macOS.command ClaudeBridge-Setup-Linux.run SHA256SUMS --clobber
           else
-            gh release create preview ClaudeBridge-Setup-Windows.cmd ClaudeBridge-Setup-macOS.command ClaudeBridge-Setup-Linux.run SHA256SUMS --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Lightweight SHA256-verified online installers for Windows, macOS and Linux. Node.js is downloaded from nodejs.org and Codex CLI from the official npm registry during setup. One-time ChatGPT sign-in required." --prerelease
+            gh release create preview ClaudeBridge-Setup-Windows.exe ClaudeBridge-Setup-macOS.command ClaudeBridge-Setup-Linux.run SHA256SUMS --target "$GITHUB_SHA" --title "ClaudeBridge Preview" --notes "Lightweight SHA256-verified online installers for Windows, macOS and Linux. The full Windows offline EXE includes a private Node runtime and Codex package; other platform setup may download dependencies. One-time ChatGPT sign-in required." --prerelease
           fi
-          gh release edit preview --title "ClaudeBridge 2.8 — Proxy-Free Claude Code Mod Preview" --notes "A compact installer with the ClaudeBridge MCP server, private Codex CLI, and official Claude Code Mod source for the Code-tab AbovePrompt UI: ◈ ClaudeBridge with Off / On demand / Fallback / Dual agent modes. No new HTTPS proxy, certificate, client patch or separate launcher. Previously enabled owned Ripple-Lite integrations are deactivated on upgrade. The Code Mod is included but needs to be loaded through Claude Code plugin management; installing MCP alone does not load it. The global Claude Desktop project title toolbar and Chat model selector are NOT exposed by the documented Mods API. Automated cross-platform tests do not replace verification in a signed-in Desktop session."
+          gh release edit preview --title "ClaudeBridge 2.9 — Offline Windows Installer Repair" --notes "Windows installer is a complete self-contained EXE with embedded private Node runtime (no download from nodejs.org), Codex integration and ClaudeBridge Mod; repairs verified incomplete installations after failed uninstall. Other platforms remain online installers. A compact installer with the ClaudeBridge MCP server, private Codex CLI, and official Claude Code Mod source for the Code-tab AbovePrompt UI: ◈ ClaudeBridge with Off / On demand / Fallback / Dual agent modes. No new HTTPS proxy, certificate, client patch or separate launcher. Previously enabled owned Ripple-Lite integrations are deactivated on upgrade. The Code Mod is included but needs to be loaded through Claude Code plugin management; installing MCP alone does not load it. The global Claude Desktop project title toolbar and Chat model selector are NOT exposed by the documented Mods API. Automated cross-platform tests do not replace verification in a signed-in Desktop session."
           # Remove previously published downloader-only and large offline assets.
           for obsolete in \
             ClaudeBridge-Online-Core.tar.gz ClaudeBridge-WebSetup-Windows.cmd \
             ClaudeBridge-WebSetup-macOS.command ClaudeBridge-WebSetup-Linux.run \
             ClaudeBridge-Linux.mcpb ClaudeBridge-macOS.mcpb ClaudeBridge-Windows.mcpb \
-            ClaudeBridge-Setup-Windows.exe; do
+            ClaudeBridge-Setup-Windows.cmd; do
             gh release delete-asset preview "$obsolete" -y 2>/dev/null || true
           done

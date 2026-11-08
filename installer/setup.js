@@ -43,13 +43,56 @@ function writeAtomic(p,s){
   fs.renameSync(temp,p);
  }catch(e){try{fs.rmSync(temp,{force:true});}catch{}throw e;}
 }
-function ensureOwnership(){
+// Recover only demonstrably owned leftovers from an interrupted older uninstall.
+// In particular, Windows could leave ONLY integrations/native-ui/node.exe after
+// attempting to delete the runtime from which its own uninstaller was running.
+function inspectOrphan(){
+ assertSafe(installPath);
+ const files=[];
+ function walk(dir,relative='',depth=0){
+  if(depth>10||files.length>10000)throw Error('Unowned installation directory is too complex to inspect safely');
+  for(const entry of fs.readdirSync(dir,{withFileTypes:true})){
+   const name=relative?relative+'/'+entry.name:entry.name;
+   const full=path.join(dir,entry.name);
+   if(entry.isSymbolicLink()||!entry.isDirectory()&&!entry.isFile())
+    throw Error('Refusing to adopt an unowned symlink or special file: '+name);
+   if(entry.isDirectory())walk(full,name,depth+1);
+   else files.push(name.replace(/\\/g,'/'));
+  }
+ }
+ walk(installPath);
+ // A residual runtime is distinctive, but accept it ONLY if there are no
+ // foreign files. Other partial installs require a valid ClaudeBridge manifest
+ // and both core entry points.
+ const runtime=platform==='win32'?'integrations/native-ui/node.exe':'integrations/native-ui/node';
+ const onlyRuntime=files.length===0||(files.length===1&&files[0]===runtime);
+ let verifiedCore=false;
+ if(files.includes('manifest.json')&&files.includes('server/v2.js')&&files.includes('installer/setup.js')){
+  try{verifiedCore=JSON.parse(fs.readFileSync(path.join(installPath,'manifest.json'),'utf8')).name==='claudebridge';}
+  catch{}
+ }
+ const allowedRoots=new Set(['manifest.json','server','vendor','ui','integrations','installer','claude-plugin','maintenance']);
+ if(!onlyRuntime&&(!verifiedCore||files.some(p=>!allowedRoots.has(p.split('/')[0]))))
+  throw Error('Unowned installation directory contains unverified files; left untouched: '+installPath);
+ // Preserve a recovery audit marker without deleting or overwriting remnants
+ // until the authenticated payload has been checked and the user chose Repair.
+ return {files:files.length,onlyRuntime,verifiedCore};
+}
+function ensureOwnership({repair=false}={}){
  if(!fs.existsSync(installPath))return;
  assertSafe(installPath);
  const data=cleanFile(marker);
- if(!data)throw Error('Existing installation directory is not owned by ClaudeBridge: '+installPath);
- try{if(JSON.parse(data).owner!=='claudebridge-standalone-v1')throw Error('Wrong owner');}
- catch{throw Error('Installation ownership marker invalid: '+installPath);}
+ if(!data){
+  if(!repair)throw Error('Existing installation is missing its ownership marker: '+installPath);
+  const recovered=inspectOrphan();
+  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',
+   recoveredAt:new Date().toISOString(),recovery:recovered,backupCreated:false,configCreated:false})+'\n');
+  process.stderr.write('Recovered verified incomplete ClaudeBridge installation: '+JSON.stringify(recovered)+'\n');
+  return;
+ }
+ let owner;
+ try{owner=JSON.parse(data).owner;}catch{throw Error('Installation ownership marker is invalid: '+installPath);}
+ if(owner!=='claudebridge-standalone-v1')throw Error('Existing installation belongs to another owner: '+installPath);
 }
 function nodeExecutable(){
  const names=platform==='win32'?['integrations/native-ui/node.exe','node.exe']:['integrations/native-ui/node','node'];
@@ -131,7 +174,7 @@ function copyItem(src,dst){
  }else throw Error('Unexpected payload object: '+src);
 }
 function install(){
- containsPayload();ensureOwnership();
+ containsPayload();ensureOwnership({repair:true});
  if(fs.existsSync(installPath)){
   // Reinstall in place so Claude's MCP entry keeps the same path.
   // Full cold replacement is performed only when Claude is not running.
@@ -157,7 +200,7 @@ function install(){
  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.8.0',installedAt:new Date().toISOString(),backupCreated:previouslyOwned,configCreated})+'\n');
  configure('install');
  if(!backupExisted&&fs.existsSync(backup))
-  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.7.0',installedAt:new Date().toISOString(),backupCreated:true,configCreated})+'\n');
+  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.9.0',installedAt:new Date().toISOString(),backupCreated:true,configCreated})+'\n');
  // ClaudeBridge must work through the original Claude Desktop launcher.
  // The experimental CDP companion needs a second launcher and is not installed.
  const nativeResult={installed:false,skipped:true,
