@@ -68,7 +68,19 @@ function main(){
   // Claude Code Mods use the documented plugin UI. No local HTTPS proxy,
   // certificate trust, egressProxyUrl or daemon is enabled on fresh installs.
   process.stdout.write('ClaudeBridge installed without HTTPS proxy or certificate trust.\n');
-
+  if(!process.env.CLAUDEBRIDGE_SETUP_TEST_HOME){
+   const installed=process.platform==='win32'?
+    path.join(process.env.LOCALAPPDATA||path.join(os.homedir(),'AppData','Local'),'ClaudeBridge','Installed'):
+    process.platform==='darwin'?
+      path.join(os.homedir(),'Library','Application Support','ClaudeBridge','Installed'):
+      path.join(os.homedir(),'.local','share','claudebridge','Installed');
+   const modInstaller=path.join(installed,'installer','mod-install.js');
+   const modResult=spawnSync(process.execPath,[modInstaller,installed],
+    {encoding:'utf8',timeout:120000,windowsHide:true,shell:false});
+   if(modResult.status===0)process.stdout.write(modResult.stdout);
+   else process.stderr.write('ClaudeBridge Mod optional activation: '+
+     String(modResult.stderr||modResult.error?.message||'unavailable').slice(-500)+'\n');
+  }
   return;
  }
  if(action==='uninstall'||action==='status'){
