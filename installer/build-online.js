@@ -34,9 +34,10 @@ try{
   'integrations/native-ui/companion.js','integrations/native-ui/cdp.js',
   'integrations/native-ui/renderer.js','integrations/native-ui/setup-unix.js',
   'integrations/native-ui/install.ps1','integrations/native-ui/launcher.vbs',
-  'installer/setup.js','installer/online-deps.js',
+  'installer/setup.js','installer/online-deps.js','installer/mod-install.js',
   'integrations/mod/settings-cli.js',
   'claude-plugin/hooks/hooks.json','claude-plugin/hooks/claudebridge.mjs',
+  'claude-plugin/.claude-plugin/marketplace.json',
   'claude-plugin/.claude-plugin/plugin.json','claude-plugin/skills/claudebridge/SKILL.md',
   'claude-plugin/commands/bridge.md','claude-plugin/commands/bridge-login.md','claude-plugin/commands/bridge-dual.md'
  ];
