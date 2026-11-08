@@ -35,7 +35,7 @@ internal static class Program
                 int choice = MessageBoxW(IntPtr.Zero,
                     present
                     ? "ClaudeBridge is already installed.\n\nYes: Update / Repair\nNo: Uninstall\nCancel: Exit"
-                    : "Install ClaudeBridge MCP and the optional native Claude Desktop menu controls?\n\nYour original Claude installation will remain unchanged.",
+                    : "Install ClaudeBridge MCP with the official Claude Code Mod?\n\nYour original Claude installation will remain unchanged.",
                     "ClaudeBridge Setup", present ? YesNoCancel | Information : YesNo | Information);
                 if (choice == Cancel || (!present && choice != Yes)) return 0;
                 mode = present && choice == No ? "uninstall" : "install";
@@ -113,9 +113,10 @@ internal static class Program
             }
             string details = mode == "install"
                 ? "ClaudeBridge MCP has been registered.\n\n"
-                  + (nativeOk
-                  ? "The native menu launcher is installed. Fully exit Claude Desktop, then start 'ClaudeBridge Claude'."
-                  : "The native launcher could not be installed automatically. MCP is registered; check ClaudeBridge settings or run the installer again.")
+                  + "No HTTPS proxy or certificate was installed. No separate Node.js download is required. "
+                  + "The private runtime is embedded in this installer.\n\n"
+                  + "Restart the normal Claude Desktop application. The Claude Code Mod can be loaded "
+                  + "in Code sessions through Claude Code's official plugin manager."
                   + "\n\nSign in to Codex once using your ChatGPT account."
                 : mode == "uninstall"
                 ? "ClaudeBridge's own MCP entry and native launcher have been removed where possible.\n\n"
