@@ -117,6 +117,8 @@ jobs:
         run: node tests/ripple-transform.js
       - name: Test managed Claude Desktop proxy configuration
         run: node tests/ripple-config.js
+      - name: Test Windows installer diagnostics
+        run: node tests/windows-setup-diagnostics.js
       - name: Test scoped TLS certificates
         run: node tests/ripple-certs.js
       - name: Test HTTPS bootstrap interception
