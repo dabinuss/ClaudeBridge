@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "claudebridge",
   "display_name": "ClaudeBridge",
-  "version": "2.6.0",
+  "version": "2.9.0",
   "description": "ClaudeBridge local MCP tools, Codex account sign-in, collaborative tasks and project memory for the normal Claude Desktop client.",
   "long_description": "ClaudeBridge works as a local MCP extension inside the standard Claude Desktop conversations. Supports Codex task delegation, persistent project plans, safe parallel worker workflows, and in-chat MCP App controls. Does not install another Claude launcher. Original Chat model dropdown customization remains an unmet product requirement.",
   "author": {
