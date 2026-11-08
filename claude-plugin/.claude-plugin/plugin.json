@@ -1,6 +1,6 @@
 {
   "name": "claudebridge",
   "displayName": "ClaudeBridge",
-  "version": "2.8.0",
+  "version": "2.9.0",
   "description": "Official Claude Code Mod toolbar for Codex delegation and project memory; no TLS proxy. Uses your locally installed ClaudeBridge MCP integration."
 }
