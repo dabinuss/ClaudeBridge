@@ -25,7 +25,11 @@ function install({root,cli,execute=run}){
  const source=path.join(root,'claude-plugin');
  const manifest=path.join(source,'.claude-plugin','marketplace.json');
  if(!fs.existsSync(manifest))throw Error('ClaudeBridge Mod marketplace is missing');
- if(!cli)return {installed:false,reason:'Claude Code CLI unavailable. Load the bundled plugin using Claude Code plugin manager.'};
+ if(!cli)return {installed:false,verified:false,uiRendered:false,reason:'Claude Code CLI unavailable; only MCP is installed. Activate ClaudeBridge using the Desktop Code tab plugin manager.'};
+ const checked=execute(cli,['plugin','validate',source]);
+ if(checked.error||checked.status!==0)
+  return {installed:false,verified:false,uiRendered:false,
+   reason:'ClaudeBridge Mod failed Claude Code plugin validation: '+String(checked.stderr||checked.stdout||checked.error?.message||'unknown').slice(-450)};
  const add=execute(cli,['plugin','marketplace','add',source]);
  if(add.error||add.status!==0){
   const message=String(add.stderr||add.stdout||add.error?.message||'').toLowerCase();
@@ -38,7 +42,18 @@ function install({root,cli,execute=run}){
   if(!/already installed/i.test(message))
    return {installed:false,reason:'Claude Code Mod activation failed: '+message.slice(-300)};
  }
- return {installed:true,reason:'ClaudeBridge Mod installed as a user-scoped Claude Code plugin; reload local Code sessions'};
+ const listing=execute(cli,['plugin','list','--json']);
+ let verified=false;
+ if(listing.status===0&&!listing.error){
+  try{
+   const parsed=JSON.parse(listing.stdout);
+   // Do not confuse a successful CLI exit with a loaded Desktop render site.
+   const installed=JSON.stringify(parsed);
+   verified=installed.includes('claudebridge@claudebridge-local');
+  }catch{}
+ }
+ return {installed:true,verified,uiRendered:false,
+  reason:verified?'ClaudeBridge plugin registered. Open local Desktop Code and use /reload-plugins; a live UI render is still unverified.':'Plugin installation returned success, but Claude Code did not confirm it in plugin list. Check /plugin.'};
 }
 if(require.main===module){
  try{

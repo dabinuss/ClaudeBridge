@@ -4,7 +4,7 @@
 
 ![Version](https://img.shields.io/badge/version-2.9.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
 
-> Preview: ClaudeBridge integrates with the normal Claude Desktop client as MCP. Its official Claude Code Mod provides a visible `◈ ClaudeBridge ▾` control **above the prompt in the local Code tab**, not in the global app header. No HTTPS proxy, CA certificate, client patch, or separate launcher is installed by default.
+> Preview: ClaudeBridge integrates with the normal Claude Desktop client as MCP. Its official Claude Code Mod provides a visible `◈ ClaudeBridge ▾` control **in the Code tab model/mode footer and above the prompt**, not in the global app header. No HTTPS proxy, CA certificate, client patch, or separate launcher is installed by default.
 
 ## Install ClaudeBridge
 
@@ -40,11 +40,11 @@ The same settings are available to Claude as MCP tools through normal-language r
 
 ## Official Claude Code Mod — no proxy
 
-The bundled plugin includes a real Claude Code Mods hooks module at `claude-plugin/hooks/claudebridge.mjs`, registered in `claude-plugin/hooks/hooks.json`. It draws **◈ ClaudeBridge ▾** and the Off / On demand / Fallback / Dual agent buttons in the native **AbovePrompt** UI of local Claude Code sessions. Clicking a mode runs the private `integrations/mod/settings-cli.js`, which updates the same `~/.claudebridge/settings.json` used by MCP tasks. It preserves UI rendered by other mods.
+The bundled plugin includes a real Claude Code Mods hooks module at `claude-plugin/hooks/claudebridge.mjs`, registered in `claude-plugin/hooks/hooks.json`. It draws **◈ ClaudeBridge ▾** using official **SessionMode** and **AbovePrompt** render sites in local Claude Code sessions; clicking the footer entry opens a **Pane** with Off / On demand / Fallback / Dual agent controls. Anthropic does not expose the global project-title bar to Mods. Clicking a mode runs the private `integrations/mod/settings-cli.js`, which updates the same `~/.claudebridge/settings.json` used by MCP tasks. It preserves UI rendered by other mods.
 
 The official Mod API currently **does not expose the global Claude Desktop header** beside the project title (such as `MemeWars`), nor the normal Chat model selector. It cannot put the control at precisely that screenshot location. The Code-tab AbovePrompt band is the closest **supported** native drawing surface. We will not use HTTPS interception, certificate trust, patching, or an alternate launcher as an implicit workaround.
 
-The installer bundles the Mod source and a local plugin marketplace. If a Claude Code CLI is available, it attempts `claude plugin marketplace add` and `claude plugin install claudebridge@claudebridge-local --scope user` automatically. If the CLI is absent, the install reports the Mod as inactive without affecting MCP; you can install it later from Claude Code's `/plugin` manager or add the installed `claude-plugin` folder as a local marketplace. Once installed, `/reload-plugins` loads the UI in local Code sessions. The control is above the prompt, **not** in the global app header.
+The installer bundles the Mod source and a local plugin marketplace. If a Claude Code CLI is available, it attempts `claude plugin marketplace add` and `claude plugin install claudebridge@claudebridge-local --scope user` automatically. If the CLI is absent, the install reports the Mod as inactive without affecting MCP; you can install it later from Claude Code's `/plugin` manager or add the installed `claude-plugin` folder as a local marketplace. Once installed, `/reload-plugins` loads the UI in local Code sessions; `/plugin` must list it as an **active Mod**. The installer explicitly reports when only MCP was registered and the Mod was NOT INSTALLED. A CLI-level success cannot verify visible Desktop UI. The control is above the prompt, **not** in the global app header.
 
 ## First use in the normal Claude Desktop app
 
