@@ -24,7 +24,15 @@ function availableCli({platform=process.platform,home=os.homedir(),env=process.e
     if(typeof script==='string'){
      const bin=path.join(path.dirname(manifestPath),script);
      if(fs.existsSync(bin)){
-      const candidate=[node,bin];
+      // Modern Claude Code's npm bin is an actual native executable,
+      // NOT a JavaScript script. Running it through Node produces
+      // ERR_UNKNOWN_FILE_EXTENSION for .exe on Windows.
+      const native=bin.toLowerCase().endsWith('.exe')||!bin.match(/\\.(?:c?m?js)$/i);
+      if(native&&fs.statSync(bin).size<1024*1024){
+       process.stderr.write('Bundled Claude executable appears to be an uninstalled placeholder: '+bin+'\\n');
+       return null;
+      }
+      const candidate=native?bin:[node,bin];
       const result=execute(candidate,['--version']);
       if(result.status===0&&!result.error)return candidate;
       process.stderr.write('Bundled Claude CLI discovery failed: '+
