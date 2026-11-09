@@ -32,6 +32,9 @@ function availableCli({platform=process.platform,home=os.homedir(),env=process.e
      }else process.stderr.write('Bundled Claude CLI script is missing: '+bin+'\\n');
     }else process.stderr.write('Bundled Claude CLI package has no executable bin\\n');
    }catch(error){process.stderr.write('Bundled Claude CLI inspection failed: '+error.message+'\\n');}
+  }else{
+   process.stderr.write('Bundled Claude CLI not present: node='+fs.existsSync(node)+
+    ', manifest='+fs.existsSync(manifestPath)+', root='+root+'\\n');
   }
  }
  const candidates=[];
