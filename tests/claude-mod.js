@@ -12,7 +12,7 @@ const settings=require('../server/settings');
  });
  const by=(name,match)=>hooks.find(x=>x.name===name&&(!match||x.matcher?.component===match||x.matcher?.command===match));
  assert(by('session.start'));assert(by('command.run','claudebridge'));assert(by('ui.render','AbovePrompt'));
- let selected='manual',invalidated=0;
+ let selected='manual',invalidated=0,panesOpened=[];
  const $={
   env:{get:async k=>k==='LOCALAPPDATA'?'C:\\Users\\Test\\AppData\\Local':undefined},
   process:{run:async args=>{
@@ -22,7 +22,8 @@ const settings=require('../server/settings');
   }},
   command:{register:async data=>assert.equal(data.name,'claudebridge')},
   ui:{
-   invalidate:()=>invalidated++,toast:()=>{},
+   invalidate:()=>invalidated++,toast:()=>{},status:()=>{},
+   open:async config=>{panesOpened.push(config);return {isPlaced:true};},
    resolve:()=>({
     Box:props=>({type:'Box',...props}),
     Button:props=>({type:'Button',...props}),
@@ -31,7 +32,19 @@ const settings=require('../server/settings');
   }
  };
  await by('session.start').fn($,{},async()=>({ok:true}));
- let tree=await by('ui.render','AbovePrompt').fn($,{},async()=>({type:'OtherMod'}));
+ assert(by('ui.render','SessionMode'),'Model-footer render surface missing');
+ assert(by('ui.render','Pane'),'Settings Pane render surface missing');
+ const footer=await by('ui.render','SessionMode').fn($,{},async()=>({type:'ModelPicker'}));
+ assert(footer.children.some(c=>c.type==='ModelPicker'),'Must preserve Claude model/mode UI');
+ const toolbar=footer.children.find(c=>c.label==='◈ ClaudeBridge ▾');
+ assert(toolbar,'Visible text button not drawn in model footer');
+ toolbar.onPress();
+ await new Promise(resolve=>setTimeout(resolve,10));
+ assert(panesOpened.some(p=>p.id==='claudebridge-control-pane'),'Button must actually open settings Pane');
+ const pane=await by('ui.render','Pane').fn($,{},async()=>({type:'OtherPaneContent'}));
+ assert(pane.children.some(c=>c.type==='OtherPaneContent'),'Existing Pane content removed');
+ assert(pane.children.some(c=>c.label?.includes('Fallback')),'Fallback control missing from pane');
+  let tree=await by('ui.render','AbovePrompt').fn($,{},async()=>({type:'OtherMod'}));
  assert.equal(tree.children[0].type,'OtherMod','Must preserve other mods');
  let row=tree.children[1];
  assert(row.children.some(c=>c.label==='◈ ClaudeBridge ▾'));
