@@ -82,8 +82,10 @@ jobs:
         if: matrix.platform == 'linux'
         shell: bash
         run: |
+          mkdir -p .claude-validator
+          echo '{"private":true}' > .claude-validator/package.json
           npm install --no-save --prefix .claude-validator @anthropic-ai/claude-code@latest
-          node .claude-validator/node_modules/@anthropic-ai/claude-code/cli.js plugin validate ./claude-plugin
+          npm exec --prefix .claude-validator -- claude plugin validate "$(pwd)/claude-plugin"
 
       - name: Test official Claude Code plugin activation
         run: node tests/mod-installer.js
