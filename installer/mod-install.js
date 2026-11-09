@@ -27,9 +27,11 @@ function availableCli({platform=process.platform,home=os.homedir(),env=process.e
       const candidate=[node,bin];
       const result=execute(candidate,['--version']);
       if(result.status===0&&!result.error)return candidate;
-     }
-    }
-   }catch{}
+      process.stderr.write('Bundled Claude CLI discovery failed: '+
+       String(result.stderr||result.stdout||result.error?.message||'no response').slice(-500)+'\\n');
+     }else process.stderr.write('Bundled Claude CLI script is missing: '+bin+'\\n');
+    }else process.stderr.write('Bundled Claude CLI package has no executable bin\\n');
+   }catch(error){process.stderr.write('Bundled Claude CLI inspection failed: '+error.message+'\\n');}
   }
  }
  const candidates=[];
