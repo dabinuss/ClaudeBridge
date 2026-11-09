@@ -113,7 +113,13 @@ jobs:
       - name: Test orphaned Windows-runtime recovery after interrupted uninstall
         run: node tests/orphan-repair.js
       - name: Bundle Codex CLI runtime
-        run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 node-forge@1.4.3
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" = "win32" ]; then
+            npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 node-forge@1.4.3 @anthropic-ai/claude-code@2.1.319
+          else
+            npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 node-forge@1.4.3
+          fi
       - name: Install build-only dependencies
         run: npm install --prefix .builddeps --no-audit --no-fund --no-save @modelcontextprotocol/ext-apps@1.1.2 esbuild@0.25.12 @anthropic-ai/mcpb jsdom@26.1.0
       - name: Build bundled MCP Apps browser UI
