@@ -78,6 +78,13 @@ jobs:
         run: node tests/plans.js
       - name: Test official Claude Code Mod and proxy-free setup
         run: node tests/claude-mod.js
+      - name: Validate plugin against real Claude Code CLI
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          npm install --no-save --prefix .claude-validator @anthropic-ai/claude-code@latest
+          node .claude-validator/node_modules/@anthropic-ai/claude-code/cli.js plugin validate ./claude-plugin
+
       - name: Test official Claude Code plugin activation
         run: node tests/mod-installer.js
       - name: Test settings and picker adapter
