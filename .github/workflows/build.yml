@@ -113,7 +113,13 @@ jobs:
       - name: Test orphaned Windows-runtime recovery after interrupted uninstall
         run: node tests/orphan-repair.js
       - name: Bundle Codex CLI runtime
-        run: npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 node-forge@1.4.3
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" = "win32" ]; then
+            npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 node-forge@1.4.3 @anthropic-ai/claude-code@2.1.319
+          else
+            npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 node-forge@1.4.3
+          fi
       - name: Install build-only dependencies
         run: npm install --prefix .builddeps --no-audit --no-fund --no-save @modelcontextprotocol/ext-apps@1.1.2 esbuild@0.25.12 @anthropic-ai/mcpb jsdom@26.1.0
       - name: Build bundled MCP Apps browser UI
@@ -177,6 +183,15 @@ jobs:
       - name: Validate official MCPB manifest
         shell: bash
         run: npm exec --prefix .builddeps -- mcpb validate manifest.json
+      - name: Rebuild offline Windows vendor after online dependency smoke test
+        if: matrix.platform == 'win32'
+        shell: bash
+        run: |
+          # online-deps.js smoke test intentionally runs npm --no-save, which
+          # prunes unrelated packages. Restore both CLIs immediately BEFORE
+          # packaging the offline EXE, not only before the smoke test.
+          npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 node-forge@1.4.3 @anthropic-ai/claude-code@2.1.319
+          node -e "const f=require('fs');for(const p of ['vendor/node_modules/@openai/codex/bin/codex.js','vendor/node_modules/@anthropic-ai/claude-code/package.json'])if(!f.existsSync(p))throw Error('Offline package missing '+p)"
       - name: Set manifest platform
         shell: bash
         run: |
@@ -186,6 +201,15 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item -LiteralPath (node -p "process.execPath") -Destination "integrations/native-ui/node.exe" -Force
+      - name: Verify real official Mod auto-activation without system Claude CLI
+        if: matrix.platform == 'win32'
+        shell: bash
+        run: |
+          export CLAUDE_CONFIG_DIR="$RUNNER_TEMP/claudebridge-mod-activation"
+          export CLAUDEBRIDGE_CLAUDE_CLI=""
+          node installer/mod-install.js "$(node -p 'process.cwd()')" > .claudebridge-mod-result.json
+          cat .claudebridge-mod-result.json
+          node -e "const fs=require('fs');const d=JSON.parse(fs.readFileSync('.claudebridge-mod-result.json','utf8'));if(!d.installed||!d.verified)throw Error('Real bundled Claude Code did not confirm plugin activation: '+d.reason)"
       - name: Include native picker runtime for macOS and Linux
         if: matrix.platform != 'win32'
         shell: bash
