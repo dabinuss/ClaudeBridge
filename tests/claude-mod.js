@@ -48,7 +48,7 @@ const settings=require('../server/settings');
  assert.equal(tree.children[0].type,'OtherMod','Must preserve other mods');
  let row=tree.children[1];
  assert(row.children.some(c=>c.label==='◈ ClaudeBridge ▾'));
- row.children[0].onPress();
+ // Footer click already expanded the same native controls.
  tree=await by('ui.render','AbovePrompt').fn($,{},async()=>({type:'OtherMod'}));
  row=tree.children[1];
  assert(row.children.some(c=>c.label?.includes('Dual agents')));
