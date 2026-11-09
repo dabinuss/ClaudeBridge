@@ -192,6 +192,15 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item -LiteralPath (node -p "process.execPath") -Destination "integrations/native-ui/node.exe" -Force
+      - name: Verify real official Mod auto-activation without system Claude CLI
+        if: matrix.platform == 'win32'
+        shell: bash
+        run: |
+          export CLAUDE_CONFIG_DIR="$RUNNER_TEMP/claudebridge-mod-activation"
+          export CLAUDEBRIDGE_CLAUDE_CLI=""
+          node installer/mod-install.js "$(node -p 'process.cwd()')" > .claudebridge-mod-result.json
+          cat .claudebridge-mod-result.json
+          node -e "const fs=require('fs');const d=JSON.parse(fs.readFileSync('.claudebridge-mod-result.json','utf8'));if(!d.installed||!d.verified)throw Error('Real bundled Claude Code did not confirm plugin activation: '+d.reason)"
       - name: Include native picker runtime for macOS and Linux
         if: matrix.platform != 'win32'
         shell: bash
