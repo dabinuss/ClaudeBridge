@@ -1,0 +1,5 @@
+{
+  "name": "claudebridge-surface-probe",
+  "version": "0.1.0",
+  "description": "Temporary read-only probe for official Claude Code UI render sites; no backend or networking."
+}
