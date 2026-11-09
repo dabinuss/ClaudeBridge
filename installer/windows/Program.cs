@@ -138,9 +138,22 @@ internal static class Program
                         {
                             string result = modOut.GetAwaiter().GetResult();
                             string detail = modErr.GetAwaiter().GetResult();
-                            modStatus = mod.ExitCode == 0
-                                ? result.Trim()
-                                : "Mod registration was unavailable: " + detail.Trim();
+                            if (mod.ExitCode != 0)
+                                modStatus = "NOT INSTALLED: " + detail.Trim();
+                            else
+                            {
+                                using JsonDocument modInfo = JsonDocument.Parse(result);
+                                JsonElement modRoot = modInfo.RootElement;
+                                bool registered = modRoot.TryGetProperty("installed", out JsonElement yes)
+                                                  && yes.ValueKind == JsonValueKind.True;
+                                bool confirmed = modRoot.TryGetProperty("verified", out JsonElement verified)
+                                                 && verified.ValueKind == JsonValueKind.True;
+                                string reason = modRoot.TryGetProperty("reason", out JsonElement explanation)
+                                    ? explanation.GetString() ?? "" : "";
+                                modStatus = registered
+                                    ? "REGISTERED" + (confirmed ? " (CLI confirmed)" : " (not yet independently confirmed)") + ": " + reason
+                                    : "NOT INSTALLED: " + reason + "\\nPlugin folder: " + Path.Combine(activeInstallPath, "claude-plugin");
+                            }
                         }
                         else
                         {
@@ -165,7 +178,7 @@ internal static class Program
                   + "The private runtime is embedded in this installer.\n\n"
                   + "Restart the normal Claude Desktop application. The Claude Code Mod can be loaded "
                   + "in Code sessions through Claude Code's official plugin manager."
-                  + "\n\nMod setup: " + modStatus
+                  + "\n\nMod setup: " + modStatus + "\n\nThis setup cannot confirm that a Desktop Code UI element was rendered."
                   + "\n\nSign in to Codex once using your ChatGPT account."
                 : mode == "uninstall"
                 ? "ClaudeBridge's own MCP entry and native launcher have been removed where possible.\n\n"
