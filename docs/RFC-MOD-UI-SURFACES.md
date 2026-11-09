@@ -49,6 +49,19 @@ Any claim that a text item is placed beside "MemeWars" requires a real screensho
 - Use `$.process.run` to launch an explicitly user-selected native Codex CLI executable. CLI binary discovery, login, cancellation, job lifecycle, cross-agent memory/SQLite, worktrees and dual coordination need individual proof; the UI Mod itself does not automatically replace the existing MCP worker.
 - Retain MCP until feature parity tests verify all legacy project and coordination features. This can dramatically reduce installer size once validated, but not during UI location verification.
 
+## Independent exact-header precedent: Chromium content script
+
+<https://github.com/maximebories/claude-desktop-clay-theme> documents a **different** UI extension channel, *not a Claude Code Mod*. It reports an experimental permanent Chromium extension on **macOS** through a bundled React DevTools extension loader enabled by `REACT_PROFILE=1`. Its content script targets `https://claude.ai/*` in the original Desktop shell, so a DOM-inserted button could in principle appear next to the project title. The repository explicitly says the launcher/paths are macOS-only; it does not establish that Windows exposes this loader.
+
+Proof plan **only if exact header is mandatory**:
+1. Inspect the user's Windows Claude Desktop app version and normal startup environment without modifying any binary. Locate whether its extension loader exists at all and whether it accepts an unpacked extension folder. Do not set `REACT_PROFILE` globally or install credentials/network interceptors.
+2. Create a benign, unpacked Chrome extension with one content script that adds a text-only `◈ ClaudeBridge (probe)` element next to a verified DOM anchor. Use a `MutationObserver` so re-render and workspace switching are covered. No access to chat content or network permission.
+3. Verify the original desktop shortcut picks the extension up at startup; verify it survives navigation/restart, handles DOM changes, doesn't duplicate buttons and can be removed cleanly.
+4. Only after that proof, connect the injected shell button to a local **Mod/MCP** settings action through an explicitly authenticated and user-scoped bridge. Never put secrets in DOM or query strings. Treat cross-webview RPC security and message origin checks as mandatory.
+5. If the loader is absent/blocked on Windows, discard this track rather than patching the app, hijacking Electron or claiming the official Mod provides shell access.
+
+This channel may meet the exact placement, but is an **experimental third-party extension path** rather than an officially supported Claude Mods API, and requires validation on the actual Windows client before being offered.
+
 ## Release gate — mandatory, no more mocked success
 
 1. Run `claude --version` and Desktop local Code-tab `/status` (must have function hooks enabled).
