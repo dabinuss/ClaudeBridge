@@ -40,7 +40,7 @@ async function refresh($){
   const result=await call($,['get']);
   mode=result.mode||'manual';available=true;detail='';
  }catch(error){available=false;detail=String(error.message||error);}
- $.ui.invalidate?.('ui.render');
+ $.ui.invalidate('ui.render');
 }
 async function setMode($,next){
  if(!Object.hasOwn(LABELS,next))return;
@@ -49,7 +49,7 @@ async function setMode($,next){
   mode=result.mode;available=true;detail='';
   $.ui.toast('ClaudeBridge: '+LABELS[mode]);
  }catch(error){available=false;detail=String(error.message||error);$.ui.toast('ClaudeBridge unavailable');}
- $.ui.invalidate?.('ui.render');
+ $.ui.invalidate('ui.render');
 }
 export function register(on){
  on('session.start',async ($,e,next)=>{
@@ -67,7 +67,7 @@ export function register(on){
  on('command.run',{command:'claudebridge'},async $=>{
   expanded=!expanded;
   await refresh($);
-  if(expanded)try{await $.ui.open?.({id:PANE,title:'◈ ClaudeBridge',closeOnEscape:true});}catch{}
+  if(expanded)try{await $.ui.open({id:PANE,title:'◈ ClaudeBridge',closeOnEscape:true});}catch{}
   return {text:'ClaudeBridge '+(expanded?'controls opened':'controls hidden')+' · '+(available?LABELS[mode]:'Backend offline: '+detail)};
  });
  // SessionMode is the compact officially supported surface nearest the
@@ -75,7 +75,7 @@ export function register(on){
  on('ui.render',{component:'SessionMode'},async ($,e,next)=>{
   const previous=await next(e);
   const {Box,Text,Button}=$.ui.resolve(e);
-  const launch=()=>{expanded=true;$.ui.open?.({id:PANE,title:'◈ ClaudeBridge',closeOnEscape:true});$.ui.invalidate?.('ui.render');};
+  const launch=()=>{expanded=true;$.ui.open({id:PANE,title:'◈ ClaudeBridge',closeOnEscape:true});$.ui.invalidate('ui.render');};
   return Box({flexDirection:'row',gap:1,children:[
    previous,
    Button({key:'cb-sessionmode',label:'◈ ClaudeBridge ▾',plain:true,onPress:launch}),
@@ -99,8 +99,8 @@ export function register(on){
   const children=[
    Button({label:'◈ ClaudeBridge ▾',plain:true,onPress:()=>{
     expanded=!expanded;
-    if(expanded)void $.ui.open?.({id:PANE,title:'◈ ClaudeBridge',closeOnEscape:true});
-    $.ui.invalidate?.('ui.render');
+    if(expanded)void $.ui.open({id:PANE,title:'◈ ClaudeBridge',closeOnEscape:true});
+    $.ui.invalidate('ui.render');
    }}),
    Text({dimColor:true,children:available?' '+LABELS[mode]:' not connected'})
   ];
