@@ -56,9 +56,13 @@ export function register(on){
   await $.command.register({name:'claudebridge',description:'Show ClaudeBridge controls'});
   // Rendering is independent of backend availability; show the Mod immediately.
   try{$.ui.status('◈ ClaudeBridge · loading');}catch{}
-  await refresh($);
-  try{$.ui.status('◈ ClaudeBridge · '+(available?LABELS[mode]:'backend offline'));}catch{}
-  return next(e);
+  const result=await next(e);
+  // Do not hold the render pipeline hostage to local backend process probing.
+  // A broken/missing runtime must not make the toolbar itself disappear.
+  void refresh($).then(()=>{
+   try{$.ui.status('◈ ClaudeBridge · '+(available?LABELS[mode]:'backend offline'));}catch{}
+  });
+  return result;
  });
  on('command.run',{command:'claudebridge'},async $=>{
   expanded=!expanded;
