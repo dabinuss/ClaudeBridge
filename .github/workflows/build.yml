@@ -183,6 +183,15 @@ jobs:
       - name: Validate official MCPB manifest
         shell: bash
         run: npm exec --prefix .builddeps -- mcpb validate manifest.json
+      - name: Rebuild offline Windows vendor after online dependency smoke test
+        if: matrix.platform == 'win32'
+        shell: bash
+        run: |
+          # online-deps.js smoke test intentionally runs npm --no-save, which
+          # prunes unrelated packages. Restore both CLIs immediately BEFORE
+          # packaging the offline EXE, not only before the smoke test.
+          npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 node-forge@1.4.3 @anthropic-ai/claude-code@2.1.319
+          node -e "const f=require('fs');for(const p of ['vendor/node_modules/@openai/codex/bin/codex.js','vendor/node_modules/@anthropic-ai/claude-code/package.json'])if(!f.existsSync(p))throw Error('Offline package missing '+p)"
       - name: Set manifest platform
         shell: bash
         run: |
