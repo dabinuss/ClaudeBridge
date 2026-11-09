@@ -14,6 +14,15 @@ try{
   calls.push([program,...args]);
   return {status:0,stdout:'ok',stderr:''};
  };
+ const pkg=path.join(tmp,'vendor','node_modules','@anthropic-ai','claude-code');
+ fs.mkdirSync(pkg,{recursive:true});
+ fs.writeFileSync(path.join(pkg,'package.json'),JSON.stringify({name:'@anthropic-ai/claude-code',bin:{claude:'cli.js'}}));
+ fs.writeFileSync(path.join(pkg,'cli.js'),'// mocked CLI');
+ const node=path.join(tmp,'integrations','native-ui',process.platform==='win32'?'node.exe':'node');
+ fs.mkdirSync(path.dirname(node),{recursive:true});
+ fs.writeFileSync(node,'mock runtime');
+ const candidate=availableCli({root:tmp,execute:(program,args)=>({status:0,stdout:'2.1.319',stderr:''})});
+ assert.deepEqual(candidate,[node,path.join(pkg,'cli.js')],'Prefer private official Claude CLI when present');
  assert.equal(availableCli({home:tmp,env:{CLAUDEBRIDGE_CLAUDE_CLI:cli},execute}),cli);
  const result=install({root:tmp,cli,execute});
  assert.equal(result.installed,true);
