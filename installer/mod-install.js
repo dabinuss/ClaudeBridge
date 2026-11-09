@@ -6,9 +6,32 @@ const path=require('node:path');
 const os=require('node:os');
 const {spawnSync}=require('node:child_process');
 function run(cli,args){
- return spawnSync(cli,args,{encoding:'utf8',timeout:45000,maxBuffer:65536,windowsHide:true,shell:false});
+ const executable=Array.isArray(cli)?cli[0]:cli;
+ const argv=Array.isArray(cli)?[...cli.slice(1),...args]:args;
+ return spawnSync(executable,argv,{encoding:'utf8',timeout:45000,maxBuffer:262144,windowsHide:true,shell:false});
 }
-function availableCli({platform=process.platform,home=os.homedir(),env=process.env,execute=run}={}){
+function availableCli({platform=process.platform,home=os.homedir(),env=process.env,execute=run,root=null}={}){
+ // Desktop bundles Claude Code but often exposes no system 'claude' command.
+ // Bundle the official CLI alongside the offline Windows MCP runtime so that
+ // user-scoped plugin registration works without a global Node/Claude install.
+ if(root){
+  const node=path.join(root,'integrations','native-ui',platform==='win32'?'node.exe':'node');
+  const manifestPath=path.join(root,'vendor','node_modules','@anthropic-ai','claude-code','package.json');
+  if(fs.existsSync(node)&&fs.existsSync(manifestPath)){
+   try{
+    const manifest=JSON.parse(fs.readFileSync(manifestPath,'utf8'));
+    const script=typeof manifest.bin==='string'?manifest.bin:manifest.bin?.claude;
+    if(typeof script==='string'){
+     const bin=path.join(path.dirname(manifestPath),script);
+     if(fs.existsSync(bin)){
+      const candidate=[node,bin];
+      const result=execute(candidate,['--version']);
+      if(result.status===0&&!result.error)return candidate;
+     }
+    }
+   }catch{}
+  }
+ }
  const candidates=[];
  if(env.CLAUDEBRIDGE_CLAUDE_CLI)candidates.push(env.CLAUDEBRIDGE_CLAUDE_CLI);
  candidates.push(platform==='win32'?path.join(home,'.local','bin','claude.exe'):path.join(home,'.local','bin','claude'));
@@ -58,7 +81,7 @@ function install({root,cli,execute=run}){
 if(require.main===module){
  try{
   const root=process.argv[2];
-  const result=install({root,cli:availableCli()});
+  const result=install({root,cli:availableCli({root})});
   process.stdout.write(JSON.stringify(result)+'\n');
  }catch(e){process.stderr.write('ClaudeBridge Mod installer: '+e.message+'\n');process.exitCode=1;}
 }
