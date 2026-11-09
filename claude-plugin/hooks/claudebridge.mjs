@@ -49,7 +49,7 @@ async function setMode($,next){
   mode=result.mode;available=true;detail='';
   $.ui.toast('ClaudeBridge: '+LABELS[mode]);
  }catch(error){available=false;detail=String(error.message||error);$.ui.toast('ClaudeBridge unavailable');}
- $.ui.invalidate('ui.render');
+ $.ui.invalidate?.('ui.render');
 }
 export function register(on){
  on('session.start',async ($,e,next)=>{
