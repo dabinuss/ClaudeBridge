@@ -27,7 +27,8 @@ const settings=require('../server/settings');
    resolve:()=>({
     Box:props=>({type:'Box',...props}),
     Button:props=>({type:'Button',...props}),
-    Text:props=>({type:'Text',...props})
+    Text:props=>({type:'Text',...props}),
+    Input:props=>({type:'Input',...props})
    })
   }
  };
@@ -44,6 +45,7 @@ const settings=require('../server/settings');
  const pane=await by('ui.render','Pane').fn($,{},async()=>({type:'OtherPaneContent'}));
  assert(pane.children.some(c=>c.type==='OtherPaneContent'),'Existing Pane content removed');
  assert(pane.children.some(c=>c.label?.includes('Fallback')),'Fallback control missing from pane');
+ assert(pane.children.some(c=>c.type==='Input'&&c.label.includes('Codex model')),'Codex model setting missing from Mod pane');
   let tree=await by('ui.render','AbovePrompt').fn($,{},async()=>({type:'OtherMod'}));
  assert.equal(tree.children[0].type,'OtherMod','Must preserve other mods');
  let row=tree.children[1];

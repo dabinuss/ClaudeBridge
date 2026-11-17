@@ -71,6 +71,22 @@ if($PurgeProjectMemory) {
       $report.notes += "Skipped a reparse-point project memory folder."
       continue
     }
+    # Previous releases created no ownership marker. Delete only folders
+    # whose entire contents match the known Bridge schema. Preserve foreign
+    # notes, nested user folders, and reparse points even on explicit purge.
+    $stateEntries = @(Get-ChildItem -LiteralPath $statePath -Force)
+    $stateNames = @($stateEntries | ForEach-Object { $_.Name })
+    $ownedPattern = '^(state\.sqlite(-wal|-shm|-journal)?|\.gitignore|(memory-monitor|watchdog)\.pid|task-[0-9a-f-]{36}\.jsonl)$'
+    $foreign = @($stateEntries | Where-Object {
+      $_.PSIsContainer -or
+      (($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) -or
+      ($_.Name -notmatch $ownedPattern)
+    })
+    if($foreign.Count -gt 0 -or $stateNames -notcontains 'state.sqlite' -or $stateNames -notcontains '.gitignore') {
+      $report.remaining += $statePath
+      $report.notes += "Skipped project folder containing unverified or unrelated files: $statePath"
+      continue
+    }
     $report.projectFolders += $statePath
     if(!$AuditOnly -and $PSCmdlet.ShouldProcess($statePath, "Permanently delete ClaudeBridge memory and task history")) {
       try {

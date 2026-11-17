@@ -30,7 +30,8 @@ function prepare(){
  const vendor=path.join(root,'vendor');
  fs.mkdirSync(vendor,{recursive:true});
  run([npmCli,'install','--prefix',vendor,'--no-save','--no-audit','--no-fund','--ignore-scripts',
-    '--registry=https://registry.npmjs.org','@openai/codex@'+version]);
+    '--registry=https://registry.npmjs.org','@openai/codex@'+version,
+    '@anthropic-ai/claude-code@2.1.319']);
  const codex=path.join(vendor,'node_modules','@openai','codex','bin','codex.js');
  if(!fs.existsSync(codex))throw Error('Codex package installation is incomplete');
  // npm integrity and HTTPS are checked by npm; verify the unpacked CLI is the expected version.
@@ -77,9 +78,14 @@ function main(){
    const modInstaller=path.join(installed,'installer','mod-install.js');
    const modResult=spawnSync(process.execPath,[modInstaller,installed],
     {encoding:'utf8',timeout:120000,windowsHide:true,shell:false});
-   if(modResult.status===0)process.stdout.write(modResult.stdout);
-   else process.stderr.write('ClaudeBridge Mod optional activation: '+
-     String(modResult.stderr||modResult.error?.message||'unavailable').slice(-500)+'\n');
+   if(modResult.status!==0||modResult.error)
+    throw Error('ClaudeBridge MCP installed but Mod activation failed: '+
+     String(modResult.stderr||modResult.error?.message||'unavailable').slice(-500));
+   let modInfo;
+   try{modInfo=JSON.parse(modResult.stdout);}catch{throw Error('ClaudeBridge MCP installed but Mod activation returned invalid status');}
+   if(!modInfo.installed||!modInfo.verified)
+    throw Error('ClaudeBridge MCP installed but Mod is NOT INSTALLED: '+String(modInfo.reason||'unknown').slice(-500));
+   process.stdout.write(modResult.stdout);
   }
   return;
  }

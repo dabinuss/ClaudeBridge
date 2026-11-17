@@ -6,9 +6,9 @@ const os=require('node:os');
 const crypto=require('node:crypto');
 const base=path.join(os.homedir(),'.claudebridge');
 const file=path.join(base,'settings.json');
-const DEFAULTS=Object.freeze({schemaVersion:2,enabled:true,mode:'manual',memoryEnabled:true,autoResume:true});
+const DEFAULTS=Object.freeze({schemaVersion:2,enabled:true,mode:'manual',memoryEnabled:true,autoResume:true,codexModel:null});
 const MODES=new Set(['off','manual','fallback','dual']);
-const KEYS=['mode','memoryEnabled','autoResume'];
+const KEYS=['mode','memoryEnabled','autoResume','codexModel'];
 function database(){
  if(!fs.existsSync(file))return {...DEFAULTS,projects:{}};
  const saved=JSON.parse(fs.readFileSync(file,'utf8'));
@@ -30,6 +30,12 @@ function write(input,projectId=null){
  if(Object.prototype.hasOwnProperty.call(input,'mode')){
   if(typeof input.mode!=='string'||!MODES.has(input.mode))throw Error('Invalid mode. Choose off, manual, fallback or dual.');
   target.mode=input.mode;
+ }
+ if(Object.prototype.hasOwnProperty.call(input,'codexModel')){
+  const value=input.codexModel;
+  if(value===null||value==='')target.codexModel=null;
+  else if(typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(value))target.codexModel=value;
+  else throw Error('Codex model must be a valid model ID or null for the CLI default.');
  }
  for(const k of ['memoryEnabled','autoResume']){
   if(Object.prototype.hasOwnProperty.call(input,k)){

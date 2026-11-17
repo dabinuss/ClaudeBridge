@@ -111,10 +111,11 @@ internal static class Program
                     && ownedPath.ValueKind == JsonValueKind.String)
                     activeInstallPath = ownedPath.GetString() ?? basePath;
             }
-            // After a successful install, activate the official Claude Code Mod
-            // with the CLI if available. Failure is non-fatal: MCP still works.
+            // A successful MCP config write does not mean the requested Code UI
+            // integration was installed. Report a partial install as a failure.
             string modStatus = "Claude Code Mod can be installed via the official plugin manager.";
-            if (mode == "install")
+            bool modConfirmed = mode != "install" || Environment.GetEnvironmentVariable("CLAUDEBRIDGE_SETUP_TEST_HOME") != null;
+            if (mode == "install" && Environment.GetEnvironmentVariable("CLAUDEBRIDGE_SETUP_TEST_HOME") == null)
             {
                 string modScript = Path.Combine(temp, "installer", "mod-install.js");
                 if (File.Exists(modScript))
@@ -148,6 +149,7 @@ internal static class Program
                                                   && yes.ValueKind == JsonValueKind.True;
                                 bool confirmed = modRoot.TryGetProperty("verified", out JsonElement verified)
                                                  && verified.ValueKind == JsonValueKind.True;
+                                modConfirmed = registered && confirmed;
                                 string reason = modRoot.TryGetProperty("reason", out JsonElement explanation)
                                     ? explanation.GetString() ?? "" : "";
                                 modStatus = registered
@@ -179,7 +181,7 @@ internal static class Program
                   + "Restart the normal Claude Desktop application. The Claude Code Mod can be loaded "
                   + "in Code sessions through Claude Code's official plugin manager."
                   + "\n\nMod setup: " + modStatus + "\n\nThis setup cannot confirm that a Desktop Code UI element was rendered."
-                  + "\n\nSign in to Codex once using your ChatGPT account."
+                  + "\n\nCodex sign-in is offered only when your ChatGPT/Codex account is not already connected."
                 : mode == "uninstall"
                 ? "ClaudeBridge's own MCP entry and native launcher have been removed where possible.\n\n"
                   + (purgeData ? "The selected personal ClaudeBridge data cleanup was also requested." :
@@ -187,7 +189,7 @@ internal static class Program
                 : output;
             if (unattended) Console.WriteLine(output);
             else MessageBoxW(IntPtr.Zero, details, "ClaudeBridge Setup", Information);
-            return 0;
+            return modConfirmed ? 0 : 2;
         }
         catch (Exception ex)
         {

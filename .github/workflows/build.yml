@@ -48,6 +48,8 @@ jobs:
           node --check server/app-ui.js
           node --check integrations/picker.js
           node --check server/process-tree.js
+          node --check server/codex-args.js
+          node --check server/safe-project-purge.js
           node --check ui/client.js
           node --check integrations/native-ui/renderer.js
           node --check integrations/native-ui/companion.js
@@ -96,6 +98,8 @@ jobs:
           node tests/picker.js
       - name: Test Codex cancellation and child cleanup
         run: node tests/cancel.js
+      - name: Test CLI-compatible Codex resume and fork arguments
+        run: node tests/codex-args.js
       - name: Test lightweight bootstrap entry points without downloading
         shell: bash
         env:
@@ -110,16 +114,17 @@ jobs:
           fi
       - name: Test one-file installer config registration
         run: node tests/standalone-setup.js
+      - name: Verify project-data purge isolation
+        run: node tests/safe-project-purge.js
       - name: Test orphaned Windows-runtime recovery after interrupted uninstall
         run: node tests/orphan-repair.js
       - name: Bundle Codex CLI runtime
         shell: bash
         run: |
-          if [ "${{ matrix.platform }}" = "win32" ]; then
-            npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 node-forge@1.4.3 @anthropic-ai/claude-code@2.1.319
-          else
-            npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 node-forge@1.4.3
-          fi
+          npm install --prefix vendor --no-audit --no-fund --no-save @openai/codex@0.167.0 node-forge@1.4.3 @anthropic-ai/claude-code@2.1.319
+      - name: Verify resume/fork options against the real Codex CLI
+        shell: bash
+        run: CLAUDEBRIDGE_CODEX_TEST_BIN=vendor/node_modules/@openai/codex/bin/codex.js node tests/codex-args.js
       - name: Install build-only dependencies
         run: npm install --prefix .builddeps --no-audit --no-fund --no-save @modelcontextprotocol/ext-apps@1.1.2 esbuild@0.25.12 @anthropic-ai/mcpb jsdom@26.1.0
       - name: Build bundled MCP Apps browser UI
@@ -216,6 +221,14 @@ jobs:
         run: |
           cp "$(node -p 'process.execPath')" integrations/native-ui/node
           chmod 700 integrations/native-ui/node
+      - name: Verify official Mod activation on macOS/Linux without global Claude
+        if: matrix.platform != 'win32'
+        shell: bash
+        run: |
+          export CLAUDE_CONFIG_DIR="$RUNNER_TEMP/claudebridge-mod-activation"
+          export CLAUDEBRIDGE_CLAUDE_CLI=""
+          node installer/mod-install.js "$(pwd)" > .claudebridge-mod-result.json
+          node -e "const fs=require('fs');const d=JSON.parse(fs.readFileSync('.claudebridge-mod-result.json','utf8'));if(!d.installed||!d.verified)throw Error('Private Claude Code CLI did not confirm Mod registration: '+d.reason)"
       - name: Verify reversible native picker installation on macOS/Linux
         if: matrix.platform != 'win32'
         shell: bash
