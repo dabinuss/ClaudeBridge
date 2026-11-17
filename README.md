@@ -49,7 +49,7 @@ The installer bundles the Mod source, a private Claude Code CLI and a local plug
 
 ## First use in the normal Claude Desktop app
 
-1. Run the compact **ClaudeBridge-Setup** installer. All Bridge scripts are embedded. Node.js and Codex CLI are downloaded privately on demand. No certificate approval is needed in the new setup.
+1. Run the **ClaudeBridge-Setup** installer for your platform. The offline release files include the private Node.js runtime, Codex CLI and Claude Code CLI. No additional system-wide installation or certificate approval is needed.
 2. Restart **Claude Desktop using its original icon**. ClaudeBridge remains registered as MCP, and the optional Claude Code Mod can show its controls above the prompt in local Code sessions once the plugin is loaded.
 3. Ask Claude: **“Check ClaudeBridge, select my local code project and connect Codex if necessary.”** If Codex is already signed in, the existing account is used; otherwise approve one-time device sign-in.
 

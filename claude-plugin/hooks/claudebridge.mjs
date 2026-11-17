@@ -16,11 +16,14 @@ async function installedCommands($){
  const home=await $.env.get('HOME');
  if(!home)return [];
  const mac=await $.env.get('OSTYPE');
- const base=mac?.includes('darwin')?
-  home+'/Library/Application Support/ClaudeBridge/':
-  home+'/.local/share/claudebridge/';
- return ['Installed-Managed','Installed'].map(dir=>[
-   base+dir+'/integrations/native-ui/node',base+dir+'/integrations/mod/settings-cli.js']);
+ // OSTYPE is a shell variable and is commonly *not exported* to desktop apps.
+ // Probe both supported user install locations, preferring the detected OS
+ // when available. Otherwise a correctly installed macOS Mod appears offline.
+ const macBase=home+'/Library/Application Support/ClaudeBridge/';
+ const linuxBase=home+'/.local/share/claudebridge/';
+ const bases=mac?.includes('darwin')?[macBase,linuxBase]:[linuxBase,macBase];
+ return bases.flatMap(base=>['Installed-Managed','Installed'].map(dir=>[
+   base+dir+'/integrations/native-ui/node',base+dir+'/integrations/mod/settings-cli.js']));
 }
 async function call($,args){
  const candidates=await installedCommands($);
