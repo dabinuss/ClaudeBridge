@@ -90,3 +90,8 @@ if [ "$MODE" = "uninstall" ] && [ "$PURGE_DATA" = "1" ]; then
 else
   "$NODE" "$TEMP_ROOT/installer/setup.js" "$MODE"
 fi
+# The remaining bytes in a generated single-file installer are a compressed
+# tar payload, not shell source. Returning from this last branch would cause
+# /bin/sh to interpret binary data and report a syntax error even after a
+# successful uninstall or status check.
+exit 0
