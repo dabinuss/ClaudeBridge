@@ -91,6 +91,40 @@ function install({root,cli,execute=run}){
  return {installed:true,verified,uiRendered:false,
   reason:verified?'ClaudeBridge plugin registered. Open local Desktop Code and use /reload-plugins; a live UI render is still unverified.':'Plugin installation returned success, but Claude Code did not confirm it in plugin list. Check /plugin.'};
 }
+// Remove only ClaudeBridge's own user-scoped plugin and marketplace. This must
+// happen before deleting the private CLI and the installed plugin source.
+function uninstall({root,cli,execute=run}){
+ if(!root||!path.isAbsolute(root))throw Error('Absolute ClaudeBridge install path required');
+ if(!cli)return {removed:false,verified:false,
+  reason:'Claude Code CLI unavailable; ClaudeBridge plugin registration could not be removed.'};
+ const id='claudebridge@claudebridge-local';
+ const listed=execute(cli,['plugin','list','--json']);
+ if(listed.error||listed.status!==0)return {removed:false,verified:false,
+  reason:'Could not inspect installed Claude plugins: '+String(listed.stderr||listed.error?.message||'unknown').slice(-300)};
+ let present;
+ try{present=JSON.stringify(JSON.parse(listed.stdout)).includes(id);}
+ catch{return {removed:false,verified:false,reason:'Claude plugin list returned invalid JSON'};}
+ if(present){
+  const removed=execute(cli,['plugin','uninstall',id,'--scope','user']);
+  if(removed.error||removed.status!==0)return {removed:false,verified:false,
+   reason:'ClaudeBridge plugin uninstall failed: '+String(removed.stderr||removed.error?.message||'unknown').slice(-300)};
+ }
+ const checked=execute(cli,['plugin','list','--json']);
+ let absent=false;
+ try{absent=checked.status===0&&!JSON.stringify(JSON.parse(checked.stdout)).includes(id);}
+ catch{}
+ if(!absent)return {removed:false,verified:false,reason:'Claude Code did not confirm the plugin was uninstalled.'};
+ // A marketplace is user-owned configuration, but this name is dedicated to
+ // ClaudeBridge. Failure here is reported rather than silently claiming a
+ // complete uninstall; it does not justify removing unrelated marketplaces.
+ const marketplace=execute(cli,['plugin','marketplace','remove','claudebridge-local']);
+ const message=String(marketplace.stderr||marketplace.stdout||marketplace.error?.message||'');
+ if(marketplace.error||marketplace.status!==0){
+  if(!/not found|does not exist|not installed|unknown marketplace/i.test(message))
+   return {removed:false,verified:true,reason:'Plugin removed but marketplace cleanup failed: '+message.slice(-300)};
+ }
+ return {removed:true,verified:true,reason:present?'ClaudeBridge user plugin and marketplace removed.':'ClaudeBridge plugin was already absent; marketplace cleaned.'};
+}
 if(require.main===module){
  try{
   const root=process.argv[2];
@@ -98,4 +132,4 @@ if(require.main===module){
   process.stdout.write(JSON.stringify(result)+'\n');
  }catch(e){process.stderr.write('ClaudeBridge Mod installer: '+e.message+'\n');process.exitCode=1;}
 }
-module.exports={availableCli,install};
+module.exports={availableCli,install,uninstall};

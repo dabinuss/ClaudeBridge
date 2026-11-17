@@ -2,7 +2,7 @@
 
 **Use Claude Desktop and Codex CLI together through ordinary Claude conversations. No slash commands required.**
 
-![Version](https://img.shields.io/badge/version-2.9.0--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
+![Version](https://img.shields.io/badge/version-2.9.2--preview-orange) ![License](https://img.shields.io/badge/license-MIT-blue)
 
 > Preview: ClaudeBridge integrates with the normal Claude Desktop client as MCP. Its official Claude Code Mod provides a visible `◈ ClaudeBridge ▾` control **in the Code tab model/mode footer and above the prompt**, not in the global app header. No HTTPS proxy, CA certificate, client patch, or separate launcher is installed by default.
 
@@ -12,18 +12,18 @@
 
 The Windows installer is an offline, self-contained executable. It includes the private Node.js runtime, Codex CLI package, ClaudeBridge MCP server, official Code Mod source and all application assets. **No separate Node.js download or global Node installation is needed.** The JavaScript runtime remains embedded inside the executable and is extracted privately for the existing MCP implementation; converting the entire MCP backend to native code is a separate change.
 
-- macOS: [ClaudeBridge-Setup-macOS.command](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Setup-macOS.command) (online installer)
-- Linux: [ClaudeBridge-Setup-Linux.run](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Setup-Linux.run) (online installer)
+- macOS: [ClaudeBridge-Setup-macOS.command](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Setup-macOS.command) (single-file installer with private CLI packages)
+- Linux: [ClaudeBridge-Setup-Linux.run](https://github.com/dabinuss/ClaudeBridge/releases/download/preview/ClaudeBridge-Setup-Linux.run) (single-file installer with private CLI packages)
 
 If an earlier Windows uninstall left `Installed/integrations/native-ui/node.exe` but removed the ownership marker, the new Windows installer identifies this exact safe-to-repair residue, restores the ownership marker and completes installation. An unowned directory with unrelated files is **never** adopted automatically.
 
 Installation registers ClaudeBridge MCP and offers the Code Mod using the supported plugin manager when available. The normal Claude Desktop app is not patched; no proxy, CA certificate or alternate launcher is installed. Previously enabled owned Ripple-Lite proxy settings should be disabled and restored before upgrading; see installer diagnostics for failures.
 
-Windows .exe setup/update/uninstall never needs to download Node.js. Other platforms' online installers still fetch a private runtime as needed.
+The standalone Windows, macOS and Linux release installers bundle their private Node.js runtimes and CLI packages. Older online bootstrap entry points remain available for recovery, and may download verified dependencies as needed.
 
 ## ClaudeBridge control panel inside Claude
 
-ClaudeBridge 2.9.0 includes an interactive **MCP Apps** control panel without replacing the MCP bridge. In your Claude conversation, ask:
+ClaudeBridge 2.9.2 includes an interactive **MCP Apps** control panel without replacing the MCP bridge. In your Claude conversation, ask:
 
 > **Open ClaudeBridge settings.**
 
@@ -35,20 +35,21 @@ When your Claude Desktop build supports local MCP Apps rendering, the panel appe
 - **Dual agents:** Claude and Codex may work on separate tasks concurrently, with durable handoffs, messages and Git worktrees.
 - **Working memory:** Toggle token-free project activity monitoring.
 - **Codex status:** Detect the bundled CLI and ChatGPT sign-in state; connect your account or open the installer download for repair.
+- **Codex model:** Optionally enter a model ID (or leave empty to use Codex's own default). The active model is bound to each launched task; a valid model name does not guarantee account entitlement.
 
 The same settings are available to Claude as MCP tools through normal-language requests. No slash commands are needed.
 
 ## Official Claude Code Mod — no proxy
 
-The bundled plugin includes a real Claude Code Mods hooks module at `claude-plugin/hooks/claudebridge.mjs`, registered in `claude-plugin/hooks/hooks.json`. It draws **◈ ClaudeBridge ▾** using official **SessionMode** and **AbovePrompt** render sites in local Claude Code sessions; clicking the footer entry opens a **Pane** with Off / On demand / Fallback / Dual agent controls. Anthropic does not expose the global project-title bar to Mods. Clicking a mode runs the private `integrations/mod/settings-cli.js`, which updates the same `~/.claudebridge/settings.json` used by MCP tasks. It preserves UI rendered by other mods.
+The bundled plugin includes a real Claude Code Mods hooks module at `claude-plugin/hooks/claudebridge.mjs`, registered in `claude-plugin/hooks/hooks.json`. It draws **◈ ClaudeBridge ▾** using official **SessionMode** and **AbovePrompt** render sites in local Claude Code sessions; clicking the footer entry opens a **Pane** with Off / On demand / Fallback / Dual agent controls and an optional Codex model ID. Anthropic does not expose the global project-title bar to Mods. Changes use the private `integrations/mod/settings-cli.js`, which updates the same `~/.claudebridge/settings.json` used by MCP tasks. It preserves UI rendered by other mods.
 
 The official Mod API currently **does not expose the global Claude Desktop header** beside the project title (such as `MemeWars`), nor the normal Chat model selector. It cannot put the control at precisely that screenshot location. The Code-tab AbovePrompt band is the closest **supported** native drawing surface. We will not use HTTPS interception, certificate trust, patching, or an alternate launcher as an implicit workaround.
 
-The installer bundles the Mod source and a local plugin marketplace. If a Claude Code CLI is available, it attempts `claude plugin marketplace add` and `claude plugin install claudebridge@claudebridge-local --scope user` automatically. If the CLI is absent, the install reports the Mod as inactive without affecting MCP; you can install it later from Claude Code's `/plugin` manager or add the installed `claude-plugin` folder as a local marketplace. Once installed, `/reload-plugins` loads the UI in local Code sessions; `/plugin` must list it as an **active Mod**. The installer explicitly reports when only MCP was registered and the Mod was NOT INSTALLED. A CLI-level success cannot verify visible Desktop UI. The control is above the prompt, **not** in the global app header.
+The installer bundles the Mod source, a private Claude Code CLI and a local plugin marketplace. It attempts `claude plugin marketplace add` and `claude plugin install claudebridge@claudebridge-local --scope user` automatically. If activation fails, the setup reports the Mod as inactive without claiming UI success; you can repair it from Claude Code's `/plugin` manager. Once installed, `/reload-plugins` loads the UI in local Code sessions; `/plugin` must list it as an **active Mod**. A CLI-level success cannot verify visible Desktop UI. The control is above the prompt, **not** in the global app header.
 
 ## First use in the normal Claude Desktop app
 
-1. Run the compact **ClaudeBridge-Setup** installer. All Bridge scripts are embedded. Node.js and Codex CLI are downloaded privately on demand. No certificate approval is needed in the new setup.
+1. Run the **ClaudeBridge-Setup** installer for your platform. The offline release files include the private Node.js runtime, Codex CLI and Claude Code CLI. No additional system-wide installation or certificate approval is needed.
 2. Restart **Claude Desktop using its original icon**. ClaudeBridge remains registered as MCP, and the optional Claude Code Mod can show its controls above the prompt in local Code sessions once the plugin is loaded.
 3. Ask Claude: **“Check ClaudeBridge, select my local code project and connect Codex if necessary.”** If Codex is already signed in, the existing account is used; otherwise approve one-time device sign-in.
 
@@ -104,7 +105,7 @@ Claude Desktop communicates with the ClaudeBridge MCP server. The server manages
 
 ## Complete uninstall and data cleanup (all platforms)
 
-Run the **same ClaudeBridge-Setup file again** and select uninstall. The installer removes the ClaudeBridge-owned local MCP registration and its files without modifying other MCP servers or your projects. You may explicitly choose to delete saved ClaudeBridge settings, plans and project memory; project source code is preserved.
+Run the **same ClaudeBridge-Setup file again** and select uninstall. The installer first unregisters ClaudeBridge's own Code Mod and marketplace using the official Claude plugin CLI, then removes the owned local MCP registration and program files. If the Mod registration cannot be inspected or removed, it preserves the installation and reports the problem so cleanup can be retried. You may explicitly choose to delete saved ClaudeBridge settings, plans and project memory; project source code and unrecognized files are preserved.
 
 If you used the older experimental **ClaudeBridge Claude** shortcut, the legacy `bridge_native_picker(action=remove)` MCP tool is still available for cleanup. New installation of that shortcut is disabled. The original Claude launcher is always used.
 
@@ -136,6 +137,8 @@ node tests/ripple-routing.js
 Platform-specific installers with bundled Codex CLI are assembled by [GitHub Actions](https://github.com/dabinuss/ClaudeBridge/actions) and published only after the full CI matrix passes.
 
 See the [engineering audit](docs/AUDIT.md) for risks and future work.
+
+See the [release-readiness investigation](docs/RELEASE-READINESS.md) for verified defects, the acceptance matrix, untested paths and the remaining native Chat model-menu blocker. **The preview is not production-ready.**
 
 ## License
 

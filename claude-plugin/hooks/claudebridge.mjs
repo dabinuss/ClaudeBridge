@@ -2,7 +2,7 @@
 // no app.asar patch, no Chrome DevTools and no launcher.
 // This surface is the local Claude Code tab, NOT the global Chat app toolbar.
 const LABELS={off:'Off',manual:'On demand',fallback:'Fallback',dual:'Dual agents'};
-let expanded=false,mode='manual',available=false,detail='';
+let expanded=false,mode='manual',codexModel='',available=false,detail='';
 const PANE='claudebridge-control-pane';
 
 async function installedCommands($){
@@ -16,11 +16,14 @@ async function installedCommands($){
  const home=await $.env.get('HOME');
  if(!home)return [];
  const mac=await $.env.get('OSTYPE');
- const base=mac?.includes('darwin')?
-  home+'/Library/Application Support/ClaudeBridge/':
-  home+'/.local/share/claudebridge/';
- return ['Installed-Managed','Installed'].map(dir=>[
-   base+dir+'/integrations/native-ui/node',base+dir+'/integrations/mod/settings-cli.js']);
+ // OSTYPE is a shell variable and is commonly *not exported* to desktop apps.
+ // Probe both supported user install locations, preferring the detected OS
+ // when available. Otherwise a correctly installed macOS Mod appears offline.
+ const macBase=home+'/Library/Application Support/ClaudeBridge/';
+ const linuxBase=home+'/.local/share/claudebridge/';
+ const bases=mac?.includes('darwin')?[macBase,linuxBase]:[linuxBase,macBase];
+ return bases.flatMap(base=>['Installed-Managed','Installed'].map(dir=>[
+   base+dir+'/integrations/native-ui/node',base+dir+'/integrations/mod/settings-cli.js']));
 }
 async function call($,args){
  const candidates=await installedCommands($);
@@ -38,7 +41,7 @@ async function call($,args){
 async function refresh($){
  try{
   const result=await call($,['get']);
-  mode=result.mode||'manual';available=true;detail='';
+  mode=result.mode||'manual';codexModel=result.codexModel||'';available=true;detail='';
  }catch(error){available=false;detail=String(error.message||error);}
  $.ui.invalidate('ui.render');
 }
@@ -49,6 +52,14 @@ async function setMode($,next){
   mode=result.mode;available=true;detail='';
   $.ui.toast('ClaudeBridge: '+LABELS[mode]);
  }catch(error){available=false;detail=String(error.message||error);$.ui.toast('ClaudeBridge unavailable');}
+ $.ui.invalidate('ui.render');
+}
+async function setModel($,next){
+ try{
+  const result=await call($,['set-model',String(next||'').trim()]);
+  codexModel=result.codexModel||'';available=true;detail='';
+  $.ui.toast('ClaudeBridge Codex model: '+(codexModel||'CLI default'));
+ }catch(error){detail=String(error.message||error);$.ui.toast('Codex model was not saved');}
  $.ui.invalidate('ui.render');
 }
 export function register(on){
@@ -84,13 +95,17 @@ export function register(on){
  });
  on('ui.render',{component:'Pane',requestId:PANE},async ($,e,next)=>{
   const previous=await next(e);
-  const {Box,Text,Button}=$.ui.resolve(e);
+  const {Box,Text,Button,Input}=$.ui.resolve(e);
   const rows=[Text({children:'◈ ClaudeBridge · Codex delegation'}),
-    Text({dimColor:true,children:available?'Current mode: '+LABELS[mode]:'Backend unavailable: '+detail})];
+    Text({dimColor:true,children:available?'Current mode: '+LABELS[mode]:'Backend unavailable: '+detail}),
+    Text({dimColor:true,children:'Codex model: '+(codexModel||'CLI default')})];
   for(const [key,label] of Object.entries(LABELS))
    rows.push(Button({key:'cb-pane-'+key,label:(mode===key?'● ':'○ ')+label,
      plain:true,onPress:()=>void setMode($,key)}));
   rows.push(Button({label:'Refresh status',plain:true,onPress:()=>void refresh($)}));
+  rows.push(Input({key:'cb-model',label:'Codex model ID (empty = default)',
+   placeholder:'e.g. gpt-6.1-sol',value:codexModel,submitLabel:'Save model',
+   onSubmit:value=>void setModel($,value)}));
   return Box({flexDirection:'column',gap:1,children:[previous,...rows].filter(Boolean)});
  });
  on('ui.render',{component:'AbovePrompt'},async ($,e,next)=>{

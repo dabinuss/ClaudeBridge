@@ -8,6 +8,7 @@ const {openDb,task,patchTask,message,now}=require('./db');
 const plans=require('./plans');
 const memory=require('./memory');
 const {terminateTree}=require('./process-tree');
+const {buildExecArgs}=require('./codex-args');
 const [projectPath,id,bundled]=process.argv.slice(2);
 const project={path:projectPath};
 const db=openDb(project);
@@ -54,15 +55,10 @@ try{
   const [exe,base]=command(binary);
   const previousTask=t.previous?task(db,t.previous):null;
   if(t.previous&&(!previousTask||!previousTask.session_id))throw Error('Previous Codex session is not available for resume.');
-  const args=t.previous
-    ?(t.worktree&&t.mode==='code'
-      ?['exec','fork',previousTask.session_id,'--json','--sandbox','workspace-write','--worktree']
-      :['exec','resume',previousTask.session_id,'--json','--sandbox',t.mode==='review'?'read-only':'workspace-write'])
-    :['exec','--json','--sandbox',t.mode==='review'?'read-only':'workspace-write'];
+  const args=buildExecArgs({previousTask,worktree:Boolean(t.worktree),mode:t.mode,model:t.codex_model||null});
   const mailbox=path.join(__dirname,'agent-mcp.js');
   args.push('-c','mcp_servers.claudebridge_mailbox.command='+JSON.stringify(process.execPath));
   args.push('-c','mcp_servers.claudebridge_mailbox.args='+JSON.stringify([mailbox,projectPath,id]));
-  if(!t.previous&&t.worktree&&t.mode==='code')args.push('--worktree');
   args.push('-');
   const context=db.prepare('SELECT sender,body FROM messages ORDER BY created DESC LIMIT 30').all().reverse();
   const boundPlan=plans.forTask(db,id);

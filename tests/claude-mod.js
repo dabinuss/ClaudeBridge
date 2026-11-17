@@ -27,7 +27,8 @@ const settings=require('../server/settings');
    resolve:()=>({
     Box:props=>({type:'Box',...props}),
     Button:props=>({type:'Button',...props}),
-    Text:props=>({type:'Text',...props})
+    Text:props=>({type:'Text',...props}),
+    Input:props=>({type:'Input',...props})
    })
   }
  };
@@ -44,6 +45,7 @@ const settings=require('../server/settings');
  const pane=await by('ui.render','Pane').fn($,{},async()=>({type:'OtherPaneContent'}));
  assert(pane.children.some(c=>c.type==='OtherPaneContent'),'Existing Pane content removed');
  assert(pane.children.some(c=>c.label?.includes('Fallback')),'Fallback control missing from pane');
+ assert(pane.children.some(c=>c.type==='Input'&&c.label.includes('Codex model')),'Codex model setting missing from Mod pane');
   let tree=await by('ui.render','AbovePrompt').fn($,{},async()=>({type:'OtherMod'}));
  assert.equal(tree.children[0].type,'OtherMod','Must preserve other mods');
  let row=tree.children[1];
@@ -57,6 +59,22 @@ const settings=require('../server/settings');
  await new Promise(resolve=>setTimeout(resolve,10));
  assert.equal(selected,'dual');
  assert(invalidated>0);
+ // Claude Desktop on macOS may not export the shell-only OSTYPE variable.
+ // A registered Mod must still find the private CLI under Application Support.
+ const attempted=[];
+ const mac$={...$,
+  env:{get:async k=>k==='HOME'?'/Users/Dabi':undefined},
+  process:{run:async argv=>{
+   attempted.push(argv[1]);
+   if(argv[1].includes('/Library/Application Support/ClaudeBridge/'))
+    return {exitCode:0,stdout:JSON.stringify({mode:'manual'}),stderr:''};
+   return {exitCode:1,stdout:'',stderr:'not found'};
+  }}
+ };
+ await by('session.start').fn(mac$,{},async()=>({ok:true}));
+ await new Promise(resolve=>setTimeout(resolve,10));
+ assert(attempted.some(p=>p.includes('/Library/Application Support/ClaudeBridge/')),
+  'macOS must find installed runtime even without exported OSTYPE');
  const cli=fs.readFileSync(path.join(__dirname,'../integrations/mod/settings-cli.js'),'utf8');
  assert(cli.includes("settings.write({mode})"),'Must update shared MCP settings');
  const online=fs.readFileSync(path.join(__dirname,'../installer/online-deps.js'),'utf8');

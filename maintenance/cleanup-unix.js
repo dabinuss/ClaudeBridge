@@ -5,6 +5,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const os=require('node:os');
 const native=require('../integrations/native-ui/setup-unix');
+const {inspect:inspectProjectState}=require('../server/safe-project-purge');
 const home=os.homedir();
 const bridgeHome=process.env.CLAUDEBRIDGE_CLEANUP_TEST_HOME||path.join(home,'.claudebridge');
 function isRealDir(p){try{const s=fs.lstatSync(p);return s.isDirectory()&&!s.isSymbolicLink();}catch(e){if(e.code==='ENOENT')return false;throw e;}}
@@ -19,10 +20,9 @@ function inspect(){
     if(!path.isAbsolute(source)||!isRealDir(source)){notes.push('Skipping invalid/unavailable project '+id);continue;}
     const state=path.join(source,'.agent-bridge');
     if(isRealDir(state)){
-     const sqlite=path.join(state,'state.sqlite');
-     const ignore=path.join(state,'.gitignore');
-     if(fs.existsSync(sqlite)&&fs.existsSync(ignore))projects.push(state);
-     else notes.push('Skipping unrecognized project folder '+state);
+     const inspection=inspectProjectState(state);
+     if(inspection.safe)projects.push(state);
+     else notes.push('Skipping unrecognized project folder '+state+': '+inspection.reason);
     }else if(fs.existsSync(state))notes.push('Skipping symlinked or non-directory state '+state);
    }
   }catch(e){notes.push('Project registry unreadable: '+e.message);}
@@ -43,7 +43,8 @@ function clean({audit=true,purgeState=false,purgeProjectMemory=false}={}){
  if(purgeProjectMemory){
   for(const p of report.projects){
    try{
-    if(!isRealDir(p))throw Error('Refusing symlink');
+    const inspection=inspectProjectState(p);
+    if(!inspection.safe)throw Error('Refusing unrecognized project data: '+inspection.reason);
     fs.rmSync(p,{recursive:true,force:true});
     report.deleted.push(p);
    }catch(e){report.remaining.push(p+' ('+e.message+')');}

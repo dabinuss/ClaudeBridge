@@ -7,5 +7,7 @@ try{
  if(process.argv[2]==='get')console.log(JSON.stringify(settings.read()));
  else if(process.argv[2]==='set'&&['off','manual','fallback','dual'].includes(mode))
   console.log(JSON.stringify(settings.write({mode})));
- else throw Error('Usage: settings-cli.js get | set off|manual|fallback|dual');
+ else if(process.argv[2]==='set-model')
+  console.log(JSON.stringify(settings.write({codexModel:mode||null})));
+ else throw Error('Usage: settings-cli.js get | set off|manual|fallback|dual | set-model MODEL_ID (empty for default)');
 }catch(e){console.error(e.message);process.exitCode=1;}

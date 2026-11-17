@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {availableCli,install}=require('../installer/mod-install');
+const {availableCli,install,uninstall}=require('../installer/mod-install');
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'cb-mod-inst-'));
 try{
  const cli=path.join(tmp,'claude');
@@ -40,5 +40,22 @@ try{
  assert(calls.some(x=>x[1]==='plugin'&&x[2]==='install'&&x[3]==='claudebridge@claudebridge-local'));
  const missing=install({root:tmp,cli:null,execute});
  assert.equal(missing.installed,false);
+ let pluginPresent=true;
+ const removalCalls=[];
+ const removeExecute=(program,args)=>{
+  removalCalls.push([program,...args]);
+  if(args[0]==='plugin'&&args[1]==='list')
+   return {status:0,stdout:JSON.stringify({installed:pluginPresent?['claudebridge@claudebridge-local']:[]}),stderr:''};
+  if(args[1]==='uninstall')pluginPresent=false;
+  return {status:0,stdout:'ok',stderr:''};
+ };
+ const removed=uninstall({root:tmp,cli,execute:removeExecute});
+ assert.equal(removed.removed,true);
+ assert(removalCalls.some(x=>x.includes('uninstall')&&x.includes('claudebridge@claudebridge-local')));
+ assert(removalCalls.some(x=>x.includes('marketplace')&&x.includes('remove')&&x.includes('claudebridge-local')));
+ assert.equal(uninstall({root:tmp,cli,execute:removeExecute}).removed,true,'Repeated uninstall must be safe');
+ assert.equal(uninstall({root:tmp,cli:null,execute:removeExecute}).removed,false,'CLI absence cannot masquerade as cleanup');
+ const failedRemoval=uninstall({root:tmp,cli,execute:()=>({status:1,stderr:'failed'})});
+ assert.equal(failedRemoval.removed,false);
  console.log('PASS: official Claude plugin registration with graceful CLI-missing fallback');
 }finally{fs.rmSync(tmp,{recursive:true,force:true});}

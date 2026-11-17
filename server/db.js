@@ -63,11 +63,12 @@ function openDb(project){
   db.exec("CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, created TEXT NOT NULL, sender TEXT NOT NULL, recipient TEXT NOT NULL, body TEXT NOT NULL, task_id TEXT);");
   const cols=db.prepare('PRAGMA table_info(tasks)').all().map(x=>x.name);
   if(!cols.includes('child_pid'))db.exec('ALTER TABLE tasks ADD COLUMN child_pid INTEGER');
+  if(!cols.includes('codex_model'))db.exec('ALTER TABLE tasks ADD COLUMN codex_model TEXT');
   db.exec("CREATE INDEX IF NOT EXISTS idx_task_updated ON tasks(updated); CREATE INDEX IF NOT EXISTS idx_msg_time ON messages(created);");
   return db;
 }
 function addTask(db,task){
-  db.prepare('INSERT INTO tasks(id,mode,prompt,status,created,updated,project_path,worktree,previous) VALUES(?,?,?,?,?,?,?,?,?)').run(task.id,task.mode,task.prompt,'queued',now(),now(),task.project_path,task.worktree?1:0,task.previous||null);
+  db.prepare('INSERT INTO tasks(id,mode,prompt,status,created,updated,project_path,worktree,previous,codex_model) VALUES(?,?,?,?,?,?,?,?,?,?)').run(task.id,task.mode,task.prompt,'queued',now(),now(),task.project_path,task.worktree?1:0,task.previous||null,task.codexModel||null);
 }
 function patchTask(db,id,patch){
   const allowed=['status','session_id','pid','child_pid','updated','last_message','error','exit_code','heart_beat','last_activity'];

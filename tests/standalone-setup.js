@@ -15,6 +15,7 @@ try{
  fs.copyFileSync(process.execPath,path.join(fixture,'integrations/native-ui',process.platform==='win32'?'node.exe':'node'));
  fs.writeFileSync(path.join(fixture,'manifest.json'),'{"version":"2.5.0"}');
  fs.writeFileSync(path.join(fixture,'server','v2.js'),'// test fixture');
+ fs.copyFileSync(path.join(source,'server','safe-project-purge.js'),path.join(fixture,'server','safe-project-purge.js'));
  fs.writeFileSync(path.join(fixture,'integrations/native-ui','renderer.js'),'// test fixture');
  fs.writeFileSync(path.join(fixture,'ui','index.html'),'test');
  fs.writeFileSync(path.join(fixture,'vendor','dummy.js'),'test');
@@ -37,6 +38,7 @@ try{
  assert(c.mcpServers.claudebridge.args[0].endsWith(path.join('Installed','server','v2.js')));
  assert(fs.existsSync(path.join(testHome,'Claude','claude_desktop_config.json.claudebridge-backup')));
  assert.equal(call('status').mcpOwned,true);
+ assert.equal(call('status').productionReady,false,'CLI-only install does not prove real Desktop behavior');
  call('install'); // idempotent
  assert.equal(call('status').mcpOwned,true);
  const removed=call('uninstall');

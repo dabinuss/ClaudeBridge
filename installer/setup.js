@@ -6,6 +6,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const os=require('node:os');
 const {spawnSync}=require('node:child_process');
+const {inspect:inspectProjectState}=require('../server/safe-project-purge');
 
 const root=path.resolve(__dirname,'..');
 const home=os.homedir();
@@ -226,10 +227,10 @@ function install(){
  const previouslyOwned=existingData.backupCreated===true;
  const configCreated=existingData.configCreated===true||!fs.existsSync(configPath);
  const backupExisted=fs.existsSync(backup);
- writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.9.1',installedAt:new Date().toISOString(),backupCreated:previouslyOwned,configCreated})+'\n');
+ writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.9.2',installedAt:new Date().toISOString(),backupCreated:previouslyOwned,configCreated})+'\n');
  configure('install');
  if(!backupExisted&&fs.existsSync(backup))
-  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.9.1',installedAt:new Date().toISOString(),backupCreated:true,configCreated})+'\n');
+  writeAtomic(marker,JSON.stringify({owner:'claudebridge-standalone-v1',version:'2.9.2',installedAt:new Date().toISOString(),backupCreated:true,configCreated})+'\n');
  // ClaudeBridge must work through the original Claude Desktop launcher.
  // The experimental CDP companion needs a second launcher and is not installed.
  const nativeResult={installed:false,skipped:true,
@@ -255,10 +256,8 @@ function purgePrivateMemory(){
    if(isLink(location)||isLink(path.join(location,'state.sqlite'))){
     skipped.push(location);continue;
    }
-   const required=['state.sqlite','.gitignore'];
-   if(!required.every(name=>fs.existsSync(path.join(location,name)))){
-    skipped.push(location);continue;
-   }
+   const inspection=inspectProjectState(location);
+   if(!inspection.safe){skipped.push(location+' ('+inspection.reason+')');continue;}
    try{fs.rmSync(location,{recursive:true,force:true});removed.push(location);}
    catch(e){skipped.push(location+' ('+e.message+')');}
   }
@@ -284,6 +283,20 @@ function uninstall(){
   log(JSON.stringify({ok:true,installed:false,message:'No standalone ClaudeBridge installation found.'}));return;
  }
  ensureOwnership();
+ // The user-scoped Mod survives deletion of the MCP config unless explicitly
+ // uninstalled through Claude's supported plugin manager. Keep the payload
+ // available for a retry when its registration cannot be inspected/removed.
+ let modResult={removed:false,skipped:true,reason:'Test installation has no user plugin registration'};
+ if(!testHome){
+  const mod=require(path.join(installPath,'installer','mod-install.js'));
+  modResult=mod.uninstall({root:installPath,cli:mod.availableCli({root:installPath})});
+  if(!modResult.removed){
+   log(JSON.stringify({ok:false,mod:modResult,mcpRemoved:false,programFilesPreserved:true,
+    message:'ClaudeBridge Mod could not be unregistered. Installation was preserved for repair and retry.'}));
+   process.exitCode=2;
+   return;
+  }
+ }
  let nativeResult;
  try{nativeResult=native('remove');}
  catch(e){nativeResult={error:e.message};}
@@ -314,7 +327,7 @@ function uninstall(){
  if(!fs.existsSync(installPath)&&fs.existsSync(stateRoot)&&!isLink(stateRoot)){
   try{if(fs.readdirSync(stateRoot).length===0)fs.rmdirSync(stateRoot);}catch{}
  }
- log(JSON.stringify({ok:!residual&&!nativeResult?.error&&!nativeResult?.pendingCleanup&&(!dataPurge||dataPurge.skipped.length===0),mcpRemoved:changed,native:nativeResult,
+ log(JSON.stringify({ok:!residual&&!nativeResult?.error&&!nativeResult?.pendingCleanup&&(!dataPurge||dataPurge.skipped.length===0),mcpRemoved:changed,native:nativeResult,mod:modResult,
   residual,projectMemoryPreserved:!dataPurge,purge:dataPurge,
   message:residual?'Close all ClaudeBridge processes and run uninstall again.':dataPurge?
     'ClaudeBridge removed and registered project memory cleanup attempted. Source projects preserved.':
@@ -324,9 +337,32 @@ function uninstall(){
 function status(){
  const current=fs.existsSync(installPath)&&fs.existsSync(marker);
  const cfg=jsonFile(configPath),registered=cfg.mcpServers?.[SERVER_KEY];
+ const codexJs=path.join(installPath,'vendor','node_modules','@openai','codex','bin','codex.js');
+ const codexPresent=current&&fs.existsSync(codexJs);
+ let codexLogin='not_checked';
+ if(codexPresent){
+  const auth=spawnSync(nodeExecutable(),[codexJs,'login','status'],
+   {encoding:'utf8',timeout:5000,windowsHide:true,maxBuffer:8192,shell:false});
+  codexLogin=auth.error?'error':auth.status===0?'signed_in':'not_signed_in';
+ }
+ let mod={pluginRegistered:false,cliAvailable:false,uiRendered:'not_verified'};
+ if(current&&!testHome&&fs.existsSync(path.join(installPath,'installer','mod-install.js'))){
+  const manager=require(path.join(installPath,'installer','mod-install.js'));
+  const cli=manager.availableCli({root:installPath});
+  mod.cliAvailable=Boolean(cli);
+  if(cli){
+   const executable=Array.isArray(cli)?cli[0]:cli;
+   const argv=Array.isArray(cli)?[...cli.slice(1),'plugin','list','--json']:['plugin','list','--json'];
+   const result=spawnSync(executable,argv,{encoding:'utf8',timeout:15000,windowsHide:true,maxBuffer:65536,shell:false});
+   if(result.status===0&&!result.error){
+    try{mod.pluginRegistered=JSON.stringify(JSON.parse(result.stdout)).includes('claudebridge@claudebridge-local');}
+    catch{mod.error='Claude plugin list did not return valid JSON';}
+   }else mod.error=String(result.stderr||result.error?.message||'Plugin status unavailable').slice(-300);
+  }
+ }
  log(JSON.stringify({installed:current,mcpRegistered:Boolean(registered),
-  mcpOwned:current&&sameRegistration(registered),
-  installPath,configPath}));
+  mcpOwned:current&&sameRegistration(registered),codexInstalled:codexPresent,codexLogin,mod,
+  nativeChatModelPicker:false,productionReady:false,installPath,configPath}));
 }
 function main(){
  const action=process.argv[2]||'install';

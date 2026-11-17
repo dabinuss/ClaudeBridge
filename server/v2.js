@@ -49,7 +49,7 @@ function projectDb(){
   return [p,openDb(p)];
 }
 function taskSummary(t){
-  return {id:t.id,mode:t.mode,status:t.status,updated:t.updated,sessionId:t.session_id,worktree:Boolean(t.worktree),lastMessage:t.last_message,error:t.error,task:t.prompt.slice(0,200)};
+  return {id:t.id,mode:t.mode,codexModel:t.codex_model||null,status:t.status,updated:t.updated,sessionId:t.session_id,worktree:Boolean(t.worktree),lastMessage:t.last_message,error:t.error,task:t.prompt.slice(0,200)};
 }
 function live(t,db){
   if(t.status!=='running'&&t.status!=='queued')return t;
@@ -157,7 +157,11 @@ function delegate(args){
         planId=saved.plan_id;
       }
     }
-    addTask(db,{id,mode,prompt,project_path:p.path,worktree:useWorktree,previous});
+    const codexModel=args.codex_model??(previous?task(db,previous)?.codex_model:configuration.codexModel);
+    if(codexModel!==null&&codexModel!==undefined&&
+       (typeof codexModel!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(codexModel)))
+      throw Error('Invalid Codex model ID');
+    addTask(db,{id,mode,prompt,project_path:p.path,worktree:useWorktree,previous,codexModel});
     if(planId)plans.bind(db,id,planId);
     db.exec('COMMIT');
     const worker=path.join(__dirname,'worker.js');
@@ -272,11 +276,11 @@ function codexLogin(){
 const props=(o,required=[])=>({type:'object',properties:o,required});
 const specs=[
  {name:'bridge_health',description:'Check whether ClaudeBridge is installed, Codex is signed in, and a local project is selected. Use this automatically when user mentions Codex.',inputSchema:props({})},
- {name:'bridge_settings',description:'Get or change ClaudeBridge mode: off, manual, fallback, dual. Fallback requires an explicit handoff or supported external trigger, not an invented quota event. Updates also affect optional desktop UI.',inputSchema:props({action:{type:'string',enum:['get','set']},mode:{type:'string',enum:['off','manual','fallback','dual']},memoryEnabled:{type:'boolean'},autoResume:{type:'boolean'}},['action'])},
+ {name:'bridge_settings',description:'Get or change ClaudeBridge mode and optional Codex model. A blank/null model uses the Codex CLI default. Actual model entitlement is checked by inference, not by selecting an ID. Updates affect Code Mod and Chat UI.',inputSchema:props({action:{type:'string',enum:['get','set']},mode:{type:'string',enum:['off','manual','fallback','dual']},codexModel:{type:['string','null']},memoryEnabled:{type:'boolean'},autoResume:{type:'boolean'}},['action'])},
  {name:'bridge_control_panel',description:'Open the interactive ClaudeBridge settings panel inside the existing Claude conversation, including Off/Manual/Fallback/Dual, memory, and Codex installation and login status.',inputSchema:props({}),_meta:{ui:{resourceUri:appUI.URI}}},
  {name:'bridge_native_picker',description:'Remove or inspect the legacy separate-launcher companion from previous previews. New installation is disabled because the companion requires a second launcher. Only status and removal are available for earlier installations; MCP runs in normal Claude Desktop.',inputSchema:props({action:{type:'string',enum:['install','remove','status']}},['action'])},
  {name:'bridge_project',description:'Register and activate a local code project, switch projects, or list available projects. Ask user for a path only if none is known.',inputSchema:props({action:{type:'string',enum:['list','register','select']},path:{type:'string'},name:{type:'string'},id:{type:'string'}},['action'])},
- {name:'bridge_delegate',description:'Delegate work. For execution of an agreed plan, include plan_id so Codex receives its immutable approved revision. Never invent user approval.',inputSchema:props({task:{type:'string'},mode:{type:'string',enum:['code','review']},worktree:{type:'boolean'},previous:{type:'string'},plan_id:{type:'string'},trigger:{type:'string',enum:['manual','limit_confirmed']}},['task'])},
+ {name:'bridge_delegate',description:'Delegate work with the configured Codex model. For execution of an agreed plan, include plan_id so Codex receives its immutable approved revision. Never invent user approval.',inputSchema:props({task:{type:'string'},mode:{type:'string',enum:['code','review']},codex_model:{type:'string'},worktree:{type:'boolean'},previous:{type:'string'},plan_id:{type:'string'},trigger:{type:'string',enum:['manual','limit_confirmed']}},['task'])},
  {name:'bridge_plan',description:'Persist original user request and explicit plan, view history, propose revisions, or activate only after the user approves. When asked to create a plan, first save the proposed plan. Do not execute a draft without approval.',inputSchema:props({action:{type:'string',enum:['list','get','propose','approve','revise','complete']},plan_id:{type:'string'},title:{type:'string'},original_request:{type:'string'},plan:{type:'string'},reason:{type:'string'},user_confirmed:{type:'boolean'}},['action'])},
  {name:'bridge_status',description:'Report Codex progress, completion or an interrupted task. If no task ID, list recent tasks.',inputSchema:props({task_id:{type:'string'}})},
  {name:'bridge_context',description:'Read durable agent messages and recent tasks for the current project.',inputSchema:props({})},

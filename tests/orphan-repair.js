@@ -18,6 +18,7 @@ try{
  fs.mkdirSync(path.join(payload,'integrations/native-ui'),{recursive:true});
  fs.mkdirSync(path.join(payload,'installer'),{recursive:true});
  fs.copyFileSync(path.join(__dirname,'../installer/setup.js'),setup);
+ fs.copyFileSync(path.join(__dirname,'../server/safe-project-purge.js'),path.join(payload,'server','safe-project-purge.js'));
  fs.writeFileSync(path.join(payload,'manifest.json'),JSON.stringify({name:'claudebridge'}));
  fs.writeFileSync(path.join(payload,'server','v2.js'),'// test');
  fs.copyFileSync(process.execPath,path.join(payload,runtime));

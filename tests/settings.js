@@ -18,6 +18,11 @@ try{
  assert.equal(cfg.write({mode:'manual'},'project-two').mode,'manual');
  assert.equal(cfg.read('project-one').mode,'dual');
  assert.throws(()=>cfg.write({mode:'invalid'}));
+ assert.equal(cfg.write({codexModel:'gpt-6.1-sol'}).codexModel,'gpt-6.1-sol');
+ assert.equal(cfg.read('project-one').codexModel,'gpt-6.1-sol');
+ assert.equal(cfg.write({codexModel:'gpt-6-astra'},'project-one').codexModel,'gpt-6-astra');
+ assert.equal(cfg.write({codexModel:null},'project-one').codexModel,null);
+ assert.throws(()=>cfg.write({codexModel:'model;rm -rf /'}),/model/);
  console.log('PASS: persistent Off Manual Fallback Dual settings');
 }finally{
  if(oldHome===undefined)delete process.env.HOME;else process.env.HOME=oldHome;

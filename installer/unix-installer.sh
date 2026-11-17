@@ -38,7 +38,7 @@ if [ "$#" -eq 0 ]; then
       *) exit 0 ;;
     esac
   else
-    echo "Installing ClaudeBridge MCP and native model-menu controls..."
+    echo "Installing ClaudeBridge MCP and the official Code-tab Mod..."
   fi
 fi
 case "$(uname -s)" in
@@ -62,9 +62,36 @@ if [ ! -f "$NODE" ]; then
   exit 1
 fi
 chmod 700 "$NODE"
+if [ "$MODE" = "install" ]; then
+  # Install the bundled ClaudeBridge MCP first, then register the official
+  # Claude Code Mod from the private CLI already included in this archive.
+  RESULT=$("$NODE" "$TEMP_ROOT/installer/setup.js" install)
+  printf '%s\n' "$RESULT"
+  if [ -z "${CLAUDEBRIDGE_SETUP_TEST_HOME:-}" ]; then
+    INSTALLED_ROOT=$(printf '%s\n' "$RESULT" | "$NODE" -e '
+      let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{
+        const info=JSON.parse(s);if(!info.ok||!info.installPath)process.exit(2);
+        process.stdout.write(info.installPath);
+      });')
+    MOD_RESULT=$("$NODE" "$INSTALLED_ROOT/installer/mod-install.js" "$INSTALLED_ROOT")
+    printf '%s\n' "$MOD_RESULT"
+    if ! printf '%s\n' "$MOD_RESULT" | "$NODE" -e '
+      let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{
+        const info=JSON.parse(s);if(!info.installed||!info.verified)process.exit(2);
+      });'; then
+      echo "ClaudeBridge MCP installed, but the Code Mod could not be activated. Run this installer again after checking Claude Code plugin permissions." >&2
+      exit 2
+    fi
+  fi
+  exit 0
+fi
 if [ "$MODE" = "uninstall" ] && [ "$PURGE_DATA" = "1" ]; then
   "$NODE" "$TEMP_ROOT/installer/setup.js" "$MODE" --purge-data
 else
   "$NODE" "$TEMP_ROOT/installer/setup.js" "$MODE"
 fi
-exit "$?"
+# The remaining bytes in a generated single-file installer are a compressed
+# tar payload, not shell source. Returning from this last branch would cause
+# /bin/sh to interpret binary data and report a syntax error even after a
+# successful uninstall or status check.
+exit 0

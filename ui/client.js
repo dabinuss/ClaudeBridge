@@ -13,6 +13,7 @@ async function refresh(){
   const [config,health]=await Promise.all([call('bridge_settings',{action:'get'}),call('bridge_health',{})]);
   $('project').textContent=health.project?'Project: '+health.project.name:'Global defaults (no project selected)';
   $('mode').value=config.mode;
+  $('codexModel').value=config.codexModel||'';
   $('memory').checked=Boolean(config.memoryEnabled);
   $('explanation').textContent=explanation[config.mode]||'';
   $('installed').textContent=health.codexInstalled?'Codex included':'Not installed';
@@ -24,6 +25,7 @@ async function refresh(){
 }
 $('mode').addEventListener('change',async e=>{try{await call('bridge_settings',{action:'set',mode:e.target.value});$('explanation').textContent=explanation[e.target.value];show('Mode saved.');}catch(err){show(err.message);}});
 $('memory').addEventListener('change',async e=>{try{await call('bridge_settings',{action:'set',memoryEnabled:e.target.checked});show('Working memory setting saved.');}catch(err){show(err.message);}});
+$('modelSaveBtn').addEventListener('click',async()=>{try{const model=$('codexModel').value.trim();await call('bridge_settings',{action:'set',codexModel:model||null});show('Codex model saved: '+(model||'CLI default')+'.');}catch(err){show('Cannot save Codex model: '+err.message);}});
 $('refreshBtn').addEventListener('click',refresh);
 $('installBtn').addEventListener('click',()=>app.openLink({url:'https://github.com/dabinuss/ClaudeBridge/releases/tag/preview'}));
 $('loginBtn').addEventListener('click',async()=>{try{const r=await call('bridge_login',{});await refresh();show(r.instructions||r.message||r.nextStep||'Follow ChatGPT sign-in instructions.');}catch(e){show(e.message);}});
