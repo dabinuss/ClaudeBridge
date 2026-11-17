@@ -341,18 +341,17 @@ jobs:
         with:
           pattern: ClaudeBridge-*
           merge-multiple: true
-      - name: Build verification-only source-based setup files
+      - name: Verify the downloaded offline installers without overwriting them
         if: steps.current.outputs.publish == 'true'
         run: |
-          node installer/build-online.js
-          test -s ClaudeBridge-Online-Core.tar.gz
-          test -s ClaudeBridge-Setup-Windows.exe
-          test -s ClaudeBridge-Setup-macOS.command
-          test -s ClaudeBridge-Setup-Linux.run
-          bash -n installer/online-unix.sh
-          sh ./ClaudeBridge-Setup-Linux.run --verify-core
-          sh ./ClaudeBridge-Setup-macOS.command --verify-core
-          node -e 'const f=require("fs"),s=f.readFileSync("ClaudeBridge-Setup-Windows.cmd","utf8"),i=s.lastIndexOf("# CLAUDEBRIDGE CORE PAYLOAD"); if(i<0||Buffer.from(s.slice(i+"# CLAUDEBRIDGE CORE PAYLOAD".length).trim(),"base64").length<10000)process.exit(1);'
+          # The test matrix already exercised each actual offline installer.
+          # NEVER run build-online.js in this directory: it writes tiny online
+          # launchers to the same .run/.command names, silently replacing the
+          # downloaded 300+ MiB offline payloads in the published release.
+          node -e 'const f=require("fs");for(const n of ["ClaudeBridge-Setup-Windows.exe","ClaudeBridge-Setup-macOS.command","ClaudeBridge-Setup-Linux.run"]){const bytes=f.statSync(n).size;if(bytes<64*1024*1024)throw Error("Refusing non-offline or truncated release asset: "+n+" ("+bytes+" bytes)");console.log(n,bytes)}'
+          test "$(head -c 2 ClaudeBridge-Setup-Windows.exe)" = MZ
+          test "$(head -c 9 ClaudeBridge-Setup-macOS.command)" = '#!/bin/sh'
+          test "$(head -c 9 ClaudeBridge-Setup-Linux.run)" = '#!/bin/sh'
       - name: Remove obsolete non-platform preview asset
         if: steps.current.outputs.publish == 'true'
         env:
